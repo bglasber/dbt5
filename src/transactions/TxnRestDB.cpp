@@ -135,16 +135,16 @@ void TxnRestDB::execute( const TPCE::TBrokerVolumeFrame1Input *pIn,
     ostringstream osSQL;
 
     //Unrolled Transaction
-    osSQL << "SELECT B_NAME as broker_name, ";
-    osSQL << "sum(TR_QTY * TR_BID_PRICE) as volume ";
-    osSQL << "FROM TRADE_REQUEST, SECTOR, INDUSTRY, ";
-    osSQL << "COMPANY, BROKER, SECURITY ";
-    osSQL << "WHERE TR_B_ID = B_ID AND ";
-    osSQL << "TR_S_SYMB = S_SYMB AND ";
-    osSQL << "S_CO_ID = CO_ID AND ";
-    osSQL << "CO_IN_ID = IN_ID AND ";
-    osSQL << "SC_ID = IN_SC_ID AND ";
-    osSQL << "B_NAME IN ( ";
+    osSQL << "SELECT b_name as broker_name, ";
+    osSQL << "sum(tr_qty * tr_bid_price) as volume ";
+    osSQL << "FROM trade_request, sector, industry, ";
+    osSQL << "company, broker, security ";
+    osSQL << "WHERE tr_b_id = b_id AND ";
+    osSQL << "tr_s_symb = s_symb AND ";
+    osSQL << "s_co_id = co_id AND ";
+    osSQL << "co_in_id = in_id AND ";
+    osSQL << "sc_id = in_sc_id AND ";
+    osSQL << "b_name IN ( ";
     int i = 0;
     osSQL << "'" << pIn->broker_list[i] << "'";
     for (i = 1; pIn->broker_list[i][0] != '\0' &&
@@ -152,8 +152,8 @@ void TxnRestDB::execute( const TPCE::TBrokerVolumeFrame1Input *pIn,
         osSQL << ", '" << pIn->broker_list[i] << "'";
     }
     osSQL << " ) AND ";
-    osSQL << "SC_NAME = '" << pIn->sector_name << "' ";
-    osSQL << "GROUP BY B_NAME ORDER BY 2 DESC";
+    osSQL << "sc_name = '" << pIn->sector_name << "' ";
+    osSQL << "GROUP BY b_name ORDER BY 2 DESC";
 
     jsonArr = sendQuery( 1, osSQL.str().c_str() );
     pOut->list_len = jsonArr->at(0)->get("list_len", "").asInt();
@@ -181,14 +181,12 @@ void TxnRestDB::execute( const TPCE::TBrokerVolumeFrame1Input *pIn,
     vAux.clear();
 }
 
-void TxnRestDB::execute(const TCustomerPositionFrame1Input *pIn,
-        TCustomerPositionFrame1Output *pOut)
-{
+void TxnRestDB::execute( const TCustomerPositionFrame1Input *pIn,
+                         TCustomerPositionFrame1Output *pOut ) {
     ostringstream osSQL;
     std::vector<Json::Value *> *jsonArr;
 
     //Unrolled sproc
-    //TODO: should be null_cust_id
     //Get the cust_id if we don't have it
     long cust_id = pIn->cust_id;
     if( cust_id == 0 ){
