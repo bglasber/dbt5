@@ -13,28 +13,29 @@
 #include "TxnHarnessDBInterface.h"
 
 #include "TxnBaseDB.h"
+#include "TxnRestDB.h"
 #include "DBConnection.h"
 using namespace TPCE;
 
-class CCustomerPositionDB : public CTxnBaseDB,
-		public CCustomerPositionDBInterface
+class CCustomerPositionDB : public TxnRestDB, public CCustomerPositionDBInterface
 {
-public:
-	CCustomerPositionDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
-	~CCustomerPositionDB() {};
+    public:
+        //CCustomerPositionDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
+        CCustomerPositionDB(CDBConnection *pDBConn) : TxnRestDB() {};
+        ~CCustomerPositionDB() {};
 
-	virtual void DoCustomerPositionFrame1(
-			const TCustomerPositionFrame1Input *pIn,
-			TCustomerPositionFrame1Output *pOut);
-	virtual void DoCustomerPositionFrame2(
-			const TCustomerPositionFrame2Input *pIn,
-			TCustomerPositionFrame2Output *pOut);
-	virtual void DoCustomerPositionFrame3();
+        virtual void DoCustomerPositionFrame1(
+                const TCustomerPositionFrame1Input *pIn,
+                TCustomerPositionFrame1Output *pOut);
+        virtual void DoCustomerPositionFrame2(
+                const TCustomerPositionFrame2Input *pIn,
+                TCustomerPositionFrame2Output *pOut);
+        virtual void DoCustomerPositionFrame3();
 
-	// Function to pass any exception thrown inside
-	// database class frame implementation
-	// back into the database class
-	void Cleanup(void* pException) {};
+        // Function to pass any exception thrown inside
+        // database class frame implementation
+        // back into the database class
+        void Cleanup(void* pException) {};
 };
 
-#endif	// CUSTOMER_POSITION_DB_H
+#endif // CUSTOMER_POSITION_DB_H

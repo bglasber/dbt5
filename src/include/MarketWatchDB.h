@@ -13,20 +13,22 @@
 #include <TxnHarnessDBInterface.h> 
 
 #include "TxnBaseDB.h"
+#include "TxnRestDB.h"
  
-class CMarketWatchDB : public CTxnBaseDB, public CMarketWatchDBInterface
+class CMarketWatchDB : public TxnRestDB, public CMarketWatchDBInterface
 {
-public:
-	CMarketWatchDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
-	~CMarketWatchDB() {};
+    public:
+        //CMarketWatchDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
+        CMarketWatchDB(CDBConnection *pDBConn) : TxnRestDB() {};
+        ~CMarketWatchDB() {};
 
-	virtual void DoMarketWatchFrame1(const TMarketWatchFrame1Input *pIn,
-			TMarketWatchFrame1Output *pOut);
+        virtual void DoMarketWatchFrame1(const TMarketWatchFrame1Input *pIn,
+                TMarketWatchFrame1Output *pOut);
 
-	// Function to pass any exception thrown inside
-	// database class frame implementation
-	// back into the database class
-	void Cleanup(void* pException) {};
+        // Function to pass any exception thrown inside
+        // database class frame implementation
+        // back into the database class
+        void Cleanup(void* pException) {};
 };
 
 #endif	// MARKET_WATCH_DB_H

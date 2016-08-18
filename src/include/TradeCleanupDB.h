@@ -13,19 +13,21 @@
 #include <TxnHarnessDBInterface.h> 
 
 #include "TxnBaseDB.h"
- 
-class CTradeCleanupDB : public CTxnBaseDB, public CTradeCleanupDBInterface
+#include "TxnRestDB.h"
+
+class CTradeCleanupDB : public TxnRestDB, public CTradeCleanupDBInterface
 {
-public:
-	CTradeCleanupDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
-	~CTradeCleanupDB() {};
+    public:
+        //CTradeCleanupDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
+        CTradeCleanupDB(CDBConnection *pDBConn) : TxnRestDB() {};
+        ~CTradeCleanupDB() {};
 
-	virtual void DoTradeCleanupFrame1(const TTradeCleanupFrame1Input *pIn);
+        virtual void DoTradeCleanupFrame1(const TTradeCleanupFrame1Input *pIn);
 
-	// Function to pass any exception thrown inside
-	// database class frame implementation
-	// back into the database class
-	void Cleanup(void* pException) {};
+        // Function to pass any exception thrown inside
+        // database class frame implementation
+        // back into the database class
+        void Cleanup(void* pException) {};
 };
 
 #endif	// TRADE_CLEANUP_DB_H

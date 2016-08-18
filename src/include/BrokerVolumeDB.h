@@ -12,22 +12,24 @@
 
 #include "TxnHarnessDBInterface.h"
 
+#include "TxnRestDB.h"
 #include "TxnBaseDB.h"
 using namespace TPCE;
- 
-class CBrokerVolumeDB : public CTxnBaseDB, public CBrokerVolumeDBInterface
+
+class CBrokerVolumeDB : public TxnRestDB, public CBrokerVolumeDBInterface
 {
-public:
-	CBrokerVolumeDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
-	~CBrokerVolumeDB() {};
+    public:
+        //CBrokerVolumeDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
+        CBrokerVolumeDB(CDBConnection *pDBConn) : TxnRestDB() {};
+        ~CBrokerVolumeDB() {};
 
-	virtual void DoBrokerVolumeFrame1(const TBrokerVolumeFrame1Input *pIn,
-			TBrokerVolumeFrame1Output *pOut);
+        virtual void DoBrokerVolumeFrame1(const TBrokerVolumeFrame1Input *pIn,
+                TBrokerVolumeFrame1Output *pOut);
 
-	// Function to pass any exception thrown inside
-	// database class frame implementation
-	// back into the database class
-	void Cleanup(void* pException) {};
+        // Function to pass any exception thrown inside
+        // database class frame implementation
+        // back into the database class
+        void Cleanup(void* pException) {};
 };
 
 #endif	// BROKER_VOLUME_DB_H

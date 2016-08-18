@@ -13,23 +13,25 @@
 #include "TxnHarnessDBInterface.h"
 
 #include "TxnBaseDB.h"
+#include "TxnRestDB.h"
 #include "DBConnection.h"
 using namespace TPCE;
 
-class CTradeStatusDB : public CTxnBaseDB, public CTradeStatusDBInterface
+class CTradeStatusDB : public TxnRestDB, public CTradeStatusDBInterface
 {
-public:
-	CTradeStatusDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
+    public:
+        //CTradeStatusDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
+        CTradeStatusDB(CDBConnection *pDBConn) : TxnRestDB() {};
 
-	~CTradeStatusDB() {};
+        ~CTradeStatusDB() {};
 
-	virtual void DoTradeStatusFrame1(const TTradeStatusFrame1Input *pIn,
-			TTradeStatusFrame1Output *pOut);
+        virtual void DoTradeStatusFrame1(const TTradeStatusFrame1Input *pIn,
+                TTradeStatusFrame1Output *pOut);
 
-	// Function to pass any exception thrown inside
-	// database class frame implementation
-	// back into the database class
-	void Cleanup(void* pException) {};
+        // Function to pass any exception thrown inside
+        // database class frame implementation
+        // back into the database class
+        void Cleanup(void* pException) {};
 };
 
 #endif	// TRADE_STATUS_DB_H

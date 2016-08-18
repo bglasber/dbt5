@@ -13,26 +13,28 @@
 #include "TxnHarnessDBInterface.h"
 
 #include "TxnBaseDB.h"
+#include "TxnRestDB.h"
 #include "DBConnection.h"
 using namespace TPCE;
 
-class CTradeUpdateDB : public CTxnBaseDB, public CTradeUpdateDBInterface
+class CTradeUpdateDB : public TxnRestDB, public CTradeUpdateDBInterface
 {
-public:
-	CTradeUpdateDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
-	~CTradeUpdateDB() {};
+    public:
+        //CTradeUpdateDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
+        CTradeUpdateDB(CDBConnection *pDBConn) : TxnRestDB() {};
+        ~CTradeUpdateDB() {};
 
-	virtual void DoTradeUpdateFrame1(const TTradeUpdateFrame1Input *pIn,
-			TTradeUpdateFrame1Output *pOut);
-	virtual void DoTradeUpdateFrame2(const TTradeUpdateFrame2Input *pIn,
-			TTradeUpdateFrame2Output *pOut);
-	virtual void DoTradeUpdateFrame3(const TTradeUpdateFrame3Input *pIn,
-			TTradeUpdateFrame3Output *pOut);
+        virtual void DoTradeUpdateFrame1(const TTradeUpdateFrame1Input *pIn,
+                TTradeUpdateFrame1Output *pOut);
+        virtual void DoTradeUpdateFrame2(const TTradeUpdateFrame2Input *pIn,
+                TTradeUpdateFrame2Output *pOut);
+        virtual void DoTradeUpdateFrame3(const TTradeUpdateFrame3Input *pIn,
+                TTradeUpdateFrame3Output *pOut);
 
-	// Function to pass any exception thrown inside
-	// database class frame implementation
-	// back into the database class
-	void Cleanup(void* pException) {};
+        // Function to pass any exception thrown inside
+        // database class frame implementation
+        // back into the database class
+        void Cleanup(void* pException) {};
 };
 
 #endif	// TRADE_UPDATE_DB_H

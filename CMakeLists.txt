@@ -46,7 +46,7 @@ IF (DBMS STREQUAL "pgsql")
 
         SET(DBCFLAGS "-DLIBPQ -I${PG_INCLUDEDIR}")
 
-        SET(DB_LIBS "-L${PG_LIBDIR} -lpq")
+        SET(DB_LIBS "-L${PG_LIBDIR} -lpq -lcurl")
 
         SET(DB_SCRIPTS scripts/pgsql/dbt5-pgsql-start-db
                        scripts/pgsql/dbt5-pgsql-create-indexes
@@ -88,6 +88,8 @@ SET(ME src/MarketExchange)
 
 SET(TXN_SOURCE ${TXN}/${DBMS}/DBConnection.cpp
                ${TXN}/TxnBaseDB.cpp
+               ${TXN}/TxnRestDB.cpp
+               ${TXN}/jsoncpp.cpp
                ${TXN}/MarketFeedDB.cpp
                ${TXN}/TradeCleanupDB.cpp
                ${TXN}/DataMaintenanceDB.cpp
@@ -210,6 +212,7 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_FORMAT_MACROS")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_CONSTANT_MACROS")
 # FIXME: How to set this for just ${TXN}/${DBMS}/DBConnection.cpp?
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${DBCFLAGS}")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DJSON_IS_AMALGAMATION")
 
 #
 # Set linker flags.

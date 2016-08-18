@@ -13,20 +13,22 @@
 #include <TxnHarnessDBInterface.h> 
 
 #include "TxnBaseDB.h"
- 
-class CSecurityDetailDB : public CTxnBaseDB, public CSecurityDetailDBInterface
+#include "TxnRestDB.h"
+
+class CSecurityDetailDB : public TxnRestDB, public CSecurityDetailDBInterface
 {
-public:
-	CSecurityDetailDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
-	~CSecurityDetailDB() {};
+    public:
+        //CSecurityDetailDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
+        CSecurityDetailDB(CDBConnection *pDBConn) : TxnRestDB() {};
+        ~CSecurityDetailDB() {};
 
-	virtual void DoSecurityDetailFrame1(const TSecurityDetailFrame1Input *pIn,
-			TSecurityDetailFrame1Output *pOut);
+        virtual void DoSecurityDetailFrame1(const TSecurityDetailFrame1Input *pIn,
+                TSecurityDetailFrame1Output *pOut);
 
-	// Function to pass any exception thrown inside
-	// database class frame implementation
-	// back into the database class
-	void Cleanup(void* pException) {};
+        // Function to pass any exception thrown inside
+        // database class frame implementation
+        // back into the database class
+        void Cleanup(void* pException) {};
 };
 
 #endif	// SECURITY_DETAIL_DB_H

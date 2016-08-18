@@ -13,21 +13,23 @@
 #include <TxnHarnessDBInterface.h> 
 
 #include "TxnBaseDB.h"
+#include "TxnRestDB.h"
 
-class CMarketFeedDB : public CTxnBaseDB, public CMarketFeedDBInterface
+class CMarketFeedDB : public TxnRestDB, public CMarketFeedDBInterface
 {
-public:
-	CMarketFeedDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
-	~CMarketFeedDB() {};
+    public:
+        //CMarketFeedDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
+        CMarketFeedDB(CDBConnection *pDBConn) : TxnRestDB() {};
+        ~CMarketFeedDB() {};
 
-	virtual void DoMarketFeedFrame1(const TMarketFeedFrame1Input *pIn,
-			TMarketFeedFrame1Output *pOut,
-			CSendToMarketInterface *pSendToMarket);
+        virtual void DoMarketFeedFrame1(const TMarketFeedFrame1Input *pIn,
+                TMarketFeedFrame1Output *pOut,
+                CSendToMarketInterface *pSendToMarket);
 
-	// Function to pass any exception thrown inside
-	// database class frame implementation
-	// back into the database class
-	void Cleanup(void* pException) {};
+        // Function to pass any exception thrown inside
+        // database class frame implementation
+        // back into the database class
+        void Cleanup(void* pException) {};
 };
 
 #endif	// MARKET_FEED_DB_H

@@ -10,22 +10,24 @@
 #ifndef DATA_MAINTENANCE_DB_H
 #define DATA_MAINTENANCE_DB_H
 
-#include <TxnHarnessDBInterface.h> 
+#include <TxnHarnessDBInterface.h>
 
 #include "TxnBaseDB.h"
- 
-class CDataMaintenanceDB : public CTxnBaseDB, public CDataMaintenanceDBInterface
+#include "TxnRestDB.h"
+
+class CDataMaintenanceDB : public TxnRestDB, public CDataMaintenanceDBInterface
 {
-public:
-	CDataMaintenanceDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
-	~CDataMaintenanceDB() {};
+    public:
+        //CDataMaintenanceDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
+        CDataMaintenanceDB(CDBConnection *pDBConn) : TxnRestDB() {};
+        ~CDataMaintenanceDB() {};
 
-	void DoDataMaintenanceFrame1(const TDataMaintenanceFrame1Input *pIn);
+        void DoDataMaintenanceFrame1(const TDataMaintenanceFrame1Input *pIn);
 
-	// Function to pass any exception thrown inside
-	// database class frame implementation
-	// back into the database class
-	void Cleanup(void* pException) {};
+        // Function to pass any exception thrown inside
+        // database class frame implementation
+        // back into the database class
+        void Cleanup(void* pException) {};
 
 };
 
