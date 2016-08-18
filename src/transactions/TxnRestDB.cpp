@@ -132,18 +132,28 @@ void TxnRestDB::execute( const TPCE::TBrokerVolumeFrame1Input *pIn,
     std::vector<Json::Value *> *jsonArr;
 
     ostringstream osBrokers;
+    ostringstream osSQL;
+
+    //Unrolled Transaction
+    osSQL << "SELECT B_NAME as broker_name, ";
+    osSQL << "sum(TR_QTY * TR_BID_PRICE) as volume ";
+    osSQL << "FROM TRADE_REQUEST, SECTOR, INDUSTRY, ";
+    osSQL << "COMPANY, BROKER, SECURITY ";
+    osSQL << "WHERE TR_B_ID = B_ID AND ";
+    osSQL << "TR_S_SYMB = S_SYMB AND ";
+    osSQL << "S_CO_ID = CO_ID AND ";
+    osSQL << "CO_IN_ID = IN_ID AND ";
+    osSQL << "SC_ID = IN_SC_ID AND ";
+    osSQL << "B_NAME IN ( ";
     int i = 0;
-    osBrokers << pIn->broker_list[i];
+    osSQL << "'" << pIn->broker_list[i] << "'";
     for (i = 1; pIn->broker_list[i][0] != '\0' &&
             i < TPCE::max_broker_list_len; i++) {
-        osBrokers << ", " << pIn->broker_list[i];
+        osSQL << ", '" << pIn->broker_list[i] << "'";
     }
-
-    //TODO: unroll this stored proc
-    ostringstream osSQL;
-    osSQL << "SELECT * FROM BrokerVolumeFrame1('{" <<
-        osBrokers.str() << "}','" <<
-        pIn->sector_name << "')";
+    osSQL << " ) AND ";
+    osSQL << "SC_NAME = '" << pIn->sector_name << "' ";
+    osSQL << "GROUP BY B_NAME ORDER BY 2 DESC";
 
     jsonArr = sendQuery( 1, osSQL.str().c_str() );
     pOut->list_len = jsonArr->at(0)->get("list_len", "").asInt();
@@ -174,38 +184,34 @@ void TxnRestDB::execute( const TPCE::TBrokerVolumeFrame1Input *pIn,
 void TxnRestDB::execute(const TCustomerPositionFrame1Input *pIn,
         TCustomerPositionFrame1Output *pOut)
 {
-    //TODO: unroll this sproc
     ostringstream osSQL;
-    osSQL << "SELECT * FROM CustomerPositionFrame1(" <<
-        pIn->cust_id << ",'" <<
-        pIn->tax_id << "')";
+    std::vector<Json::Value *> *jsonArr;
 
-    std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+    //Unrolled sproc
+    //TODO: should be null_cust_id
+    //Get the cust_id if we don't have it
+    long cust_id = pIn->cust_id;
+    if( cust_id == 0 ){
+        osSQL << "SELECT cust_id FROM customer WHERE ";
+        osSQL << "c_tax_id = " << pIn->tax_id;
+        jsonArr = sendQuery( 1, osSQL.str().c_str() );
+        cust_id = jsonArr->at(0)->get( "cust_id", "" ).asInt64();
+        pOut->cust_id = jsonArr->at(0)->get( "cust_id", "" ).asInt64();
+        //TODO: free jsonArr
+        //Reset stringstream
+        osSQL = std::ostringstream();
+    }
+
+    //Retrieve Customer Fields
+    osSQL << "SELECT c_st_id, c_l_name, c_f_name, c_m_name, ";
+    osSQL << "c_gndr, c_tier, c_dob, c_ad_id, c_ctry_1, ";
+    osSQL << "c_area_1, c_local_1, c_ext_1, c_ctry_2, ";
+    osSQL << "c_area_2, c_local_2, c_ext_2, c_ctry_3, ";
+    osSQL << "c_area_3, c_local_3, c_ext_3, c_email_1, c_email_2 ";
+    osSQL << "FROM customer where c_id = " << cust_id;
+    jsonArr = sendQuery( 1, osSQL.str().c_str() );
     pOut->acct_len = jsonArr->at(0)->get("acct_len", "").asInt();
     pOut->cust_id = jsonArr->at(0)->get("cust_id", "").asInt64();
-
-    vector<string> vAux;
-    vector<string>::iterator p;
-
-    TokenizeSmart(jsonArr->at(0)->get("acct_id", "").asString(), vAux);
-
-    int i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        pOut->acct_id[i] = atol( (*p).c_str() );
-        ++i;
-    }
-    check_count(pOut->acct_len, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
-
-    TokenizeSmart(jsonArr->at(0)->get("asset_total", "").asString(), vAux);
-
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        pOut->asset_total[i] = atof( (*p).c_str() );
-        ++i;
-    }
-    check_count(pOut->acct_len, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
 
     pOut->c_ad_id = jsonArr->at(0)->get("c_ad_id","").asInt64();
 
@@ -257,6 +263,43 @@ void TxnRestDB::execute(const TCustomerPositionFrame1Input *pIn,
     strncpy(pOut->c_st_id, jsonArr->at(0)->get("c_st_id", "").asCString(), cST_ID_len);
     pOut->c_st_id[cST_ID_len] = '\0';
     strncpy(&pOut->c_tier, jsonArr->at(0)->get("c_tier", "").asCString(), 1);
+
+    //TODO: free jsonArr
+    //Reset stringstream
+    osSQL = std::ostringstream();
+
+    //Now retrieve account information
+    osSQL << "SELECT ca_id as acct_id, ca_bal as cash_bal, ";
+    osSQL << "IFNULL(sum(hs_qty * lt_price), 0) as assets_total ";
+    osSQL << "FROM customer_account LEFT OUTER JOIN ";
+    osSQL << "holding_summary ON hs_ca_id = ca_id, ";
+    osSQL << "last_trade WHERE ca_c_id = " << cust_id;
+    osSQL << " AND lt_s_symb = hs_s_symb GROUP BY ";
+    osSQL << "ca_id, ca_bal ORDER BY 3 ASC LIMIT 10";
+
+    vector<string> vAux;
+    vector<string>::iterator p;
+
+    TokenizeSmart(jsonArr->at(0)->get("acct_id", "").asString(), vAux);
+
+    int i = 0;
+    for (p = vAux.begin(); p != vAux.end(); ++p) {
+        pOut->acct_id[i] = atol( (*p).c_str() );
+        ++i;
+    }
+    check_count(pOut->acct_len, vAux.size(), __FILE__, __LINE__);
+    vAux.clear();
+
+    TokenizeSmart(jsonArr->at(0)->get("asset_total", "").asString(), vAux);
+
+    i = 0;
+    for (p = vAux.begin(); p != vAux.end(); ++p) {
+        pOut->asset_total[i] = atof( (*p).c_str() );
+        ++i;
+    }
+    check_count(pOut->acct_len, vAux.size(), __FILE__, __LINE__);
+    vAux.clear();
+
 
     TokenizeSmart(jsonArr->at(0)->get("cash_bal", "").asString(), vAux);
     i = 0;
