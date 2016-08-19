@@ -2,7 +2,8 @@
 #include <sstream>
 #include "TxnRestDB.h"
 #include "TxnHarnessStructs.h"
-#include "TxnHarnessSendToMarket.h" #include "DBT5Consts.h"
+#include "TxnHarnessSendToMarket.h"
+#include "DBT5Consts.h"
 #include "json.h"
 
 char *TxnRestDB::escape(string s)
@@ -12,6 +13,46 @@ char *TxnRestDB::escape(string s)
     return NULL;
 }
 
+/* These might just be the most ridiculous macros I have ever written
+*  I bet they're fast though
+*/
+#define INT_VEC_ASSIGN( field, vec, out_struct, out ) \
+    do {\
+        _Pragma("GCC ivdep") \
+        for( unsigned vec_iter = 0; vec_iter < vec->size(); vec_iter++ ) {\
+            int ptr_offset = offsetof( out_struct, field ); \
+            ((int *)(((char *)out)+ptr_offset))[vec_iter] = vec->at(vec_iter)->get( # field, "" ).asInt(); \
+        } \
+    } while(0)
+
+
+#define LONG_VEC_ASSIGN( field, vec, out_struct, out ) \
+    do {\
+        _Pragma("GCC ivdep") \
+        for( unsigned vec_iter = 0; vec_iter < vec->size(); vec_iter++ ) {\
+            int ptr_offset = offsetof( out_struct, field ); \
+            ((long *)(((char *)out)+ptr_offset))[vec_iter] = vec->at(vec_iter)->get( # field, "" ).asInt64(); \
+        } \
+    } while(0)
+
+#define FLOAT_VEC_ASSIGN( field, vec, out_struct, out ) \
+    do {\
+        _Pragma("GCC ivdep") \
+        for( unsigned vec_iter = 0; vec_iter < vec->size(); vec_iter++ ) {\
+            int ptr_offset = offsetof( out_struct, field ); \
+            ((float *)(((char *)out)+ptr_offset))[vec_iter] = vec->at(vec_iter)->get( # field, "" ).asFloat(); \
+        } \
+    } while(0)
+
+#define STR_VEC_ASSIGN( field, field_max_len, vec, out_struct, out ) \
+    do {\
+        _Pragma("GCC ivdep") \
+        for( unsigned vec_iter = 0; vec_iter < vec->size(); vec_iter++ ) {\
+            int ptr_offset = offsetof( out_struct, field ); \
+            strncpy( ((char **) (((char *)out)+ptr_offset))[vec_iter], vec->at(vec_iter)->get( # field, "" ).asCString(), field_max_len ); \
+            ((char **) (((char *)out)+ptr_offset))[vec_iter][field_max_len] = '\0'; \
+        } \
+    } while(0)
 
 bool inline check_count(int should, int is, const char *file, int line) {
     if (should != is) {
@@ -126,8 +167,8 @@ std::vector<Json::Value *> *TxnRestDB::sendQuery( int clientId, string query ){
     return resultArr;
 }
 
-void TxnRestDB::execute( const TPCE::TBrokerVolumeFrame1Input *pIn,
-                         TPCE::TBrokerVolumeFrame1Output *pOut ) {
+void TxnRestDB::execute( const TBrokerVolumeFrame1Input *pIn,
+                         TBrokerVolumeFrame1Output *pOut ) {
 
     std::vector<Json::Value *> *jsonArr;
 
@@ -145,9 +186,8 @@ void TxnRestDB::execute( const TPCE::TBrokerVolumeFrame1Input *pIn,
     osSQL << "co_in_id = in_id AND ";
     osSQL << "sc_id = in_sc_id AND ";
     osSQL << "b_name IN ( ";
-    int i = 0;
-    osSQL << "'" << pIn->broker_list[i] << "'";
-    for (i = 1; pIn->broker_list[i][0] != '\0' &&
+    osSQL << "'" << pIn->broker_list[0] << "'";
+    for (int i = 1; pIn->broker_list[i][0] != '\0' &&
             i < TPCE::max_broker_list_len; i++) {
         osSQL << ", '" << pIn->broker_list[i] << "'";
     }
@@ -156,29 +196,12 @@ void TxnRestDB::execute( const TPCE::TBrokerVolumeFrame1Input *pIn,
     osSQL << "GROUP BY b_name ORDER BY 2 DESC";
 
     jsonArr = sendQuery( 1, osSQL.str().c_str() );
-    pOut->list_len = jsonArr->at(0)->get("list_len", "").asInt();
+    pOut->list_len = jsonArr->size(); //row_count
 
-    vector<string> vAux;
-    vector<string>::iterator p;
+    STR_VEC_ASSIGN( broker_name, cB_NAME_len, jsonArr, TBrokerVolumeFrame1Output, pOut );
+    FLOAT_VEC_ASSIGN( volume, jsonArr, TBrokerVolumeFrame1Output, pOut );
 
-    TokenizeSmart(jsonArr->at(0)->get("broker_name", "").asString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        strncpy(pOut->broker_name[i], (*p).c_str(), cB_NAME_len);
-        pOut->broker_name[i][cB_NAME_len] = '\0';
-        ++i;
-    }
-    check_count(pOut->list_len, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
-
-    TokenizeSmart(jsonArr->at(0)->get("volume", "").asString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        pOut->volume[i] = atof((*p).c_str());
-        ++i;
-    }
-    check_count(pOut->list_len, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
+    //TODO: Free JSON
 }
 
 void TxnRestDB::execute( const TCustomerPositionFrame1Input *pIn,
@@ -275,126 +298,214 @@ void TxnRestDB::execute( const TCustomerPositionFrame1Input *pIn,
     osSQL << " AND lt_s_symb = hs_s_symb GROUP BY ";
     osSQL << "ca_id, ca_bal ORDER BY 3 ASC LIMIT 10";
 
-    vector<string> vAux;
-    vector<string>::iterator p;
-
-    TokenizeSmart(jsonArr->at(0)->get("acct_id", "").asString(), vAux);
-
-    int i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        pOut->acct_id[i] = atol( (*p).c_str() );
-        ++i;
-    }
-    check_count(pOut->acct_len, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
-
-    TokenizeSmart(jsonArr->at(0)->get("asset_total", "").asString(), vAux);
-
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        pOut->asset_total[i] = atof( (*p).c_str() );
-        ++i;
-    }
-    check_count(pOut->acct_len, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
-
-
-    TokenizeSmart(jsonArr->at(0)->get("cash_bal", "").asString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        pOut->cash_bal[i] = atof( (*p).c_str() );
-        ++i;
-    }
-    check_count(pOut->acct_len, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
+    LONG_VEC_ASSIGN( acct_id, jsonArr, TCustomerPositionFrame1Output, pOut );
+    FLOAT_VEC_ASSIGN( asset_total, jsonArr, TCustomerPositionFrame1Output, pOut );
+    FLOAT_VEC_ASSIGN( cash_bal, jsonArr, TCustomerPositionFrame1Output, pOut );
 }
 
 void TxnRestDB::execute( const TCustomerPositionFrame2Input *pIn,
                          TCustomerPositionFrame2Output *pOut )
 {
-    //TODO: unfold this sproc
+
     ostringstream osSQL;
-    osSQL << "SELECT * FROM CustomerPositionFrame2(" << pIn->acct_id << ")";
+    osSQL << "SELECT t_id as trade_id, t_s_symb as symbol, t_qty as qty, st_name as trade_status, th_dts as hist_dts ";
+    osSQL << "FROM ( SELECT t_id as id FROM trade WHERE t_ca_id = " << pIn->acct_id;
+    osSQL << " ORDER BY t_dts DESC LIMIT 10 ) as T, TRADE, TRADE_HISTORY, ";
+    osSQL << "STATUS_TYPE WHERE t_id = id AND th_t_id = t_id AND ";
+    osSQL << "st_id = th_st_id ORDER BY th_dts DESC LIMIT 30";
 
     std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+    pOut->hist_len = jsonArr->size();
 
-    pOut->hist_len = jsonArr->at(0)->get("hist_len","").asInt();
-
-    vector<string> vAux;
-    vector<string>::iterator p;
-    int i;
-
-    TokenizeSmart(jsonArr->at(0)->get("hist_dts", "").asString(), vAux);
-
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        sscanf((*p).c_str(), "%hd-%hd-%hd %hd:%hd:%hd",
+    for( unsigned i = 0; i < jsonArr->size(); i++ ) {
+        sscanf(jsonArr->at(i)->get("hist_dts", "" ).asCString(), "%hd-%hd-%hd %hd:%hd:%hd",
                 &pOut->hist_dts[i].year,
                 &pOut->hist_dts[i].month,
                 &pOut->hist_dts[i].day,
                 &pOut->hist_dts[i].hour,
                 &pOut->hist_dts[i].minute,
                 &pOut->hist_dts[i].second);
-        ++i;
     }
-    check_count(pOut->hist_len, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
 
-    TokenizeSmart(jsonArr->at(0)->get("qty", "").asString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        pOut->qty[i] = atoi((*p).c_str());
-        ++i;
-    }
-    check_count(pOut->hist_len, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
+    INT_VEC_ASSIGN( qty, jsonArr, TCustomerPositionFrame2Output, pOut );
+    STR_VEC_ASSIGN( symbol, cSYMBOL_len, jsonArr, TCustomerPositionFrame2Output, pOut );
+    LONG_VEC_ASSIGN( trade_id, jsonArr, TCustomerPositionFrame2Output, pOut );
+    STR_VEC_ASSIGN( trade_status, cST_NAME_len, jsonArr, TCustomerPositionFrame2Output, pOut );
 
-    TokenizeSmart(jsonArr->at(0)->get("symbol", "").asString(), vAux);
-
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        strncpy(pOut->symbol[i], (*p).c_str(), cSYMBOL_len);
-        pOut->symbol[i][cSYMBOL_len] = '\0';
-        ++i;
-    }
-    check_count(pOut->hist_len, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
-
-    TokenizeSmart(jsonArr->at(0)->get("trade_id", "").asString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        pOut->trade_id[i] = atol((*p).c_str());
-        ++i;
-    }
-    check_count(pOut->hist_len, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
-
-    TokenizeSmart(jsonArr->at(0)->get("trade_status", "").asString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        strncpy(pOut->trade_status[i], (*p).c_str(), cST_NAME_len);
-        pOut->trade_status[i][cST_NAME_len] = '\0';
-        ++i;
-    }
-    check_count(pOut->hist_len, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
+    //TODO: free jsonArr
 }
 
 void TxnRestDB::execute( const TDataMaintenanceFrame1Input *pIn ) {
-    ostringstream osSQL;
-    //TODO: unroll this sproc
-    osSQL << "SELECT * FROM DataMaintenanceFrame1(" <<
-        pIn->acct_id << ", " <<
-        pIn->c_id << ", " <<
-        pIn->co_id << ", " <<
-        pIn->day_of_month << ", '" <<
-        pIn->symbol << "', '" <<
-        pIn->table_name << "', '" <<
-        pIn->tx_id << "', " <<
-        pIn->vol_incr << ")";
 
-    //Free this
-    std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+    //unrolled sproc
+    if( strcmp( pIn->table_name, "account_permission" ) == 0 ) {
+        //ACCOUNT_PERMISSION TABLE
+        ostringstream osSQL;
+        osSQL << "SELECT ap_acl FROM account_permission ";
+        osSQL << "WHERE ap_ca_id = " << pIn->acct_id << " ORDER BY ";
+        osSQL << "ap_acl DESC LIMIT 1";
+
+        std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+        const char *buff = jsonArr->at(0)->get( "ap_acl", "" ).asCString();
+        //TODO: free jsonArr
+        if( strcmp( buff, "1111" ) != 0 ) {
+            //reset stringstream
+            osSQL = std::ostringstream();
+            osSQL << "UPDATE account_permission SET ";
+            osSQL << "ap_acl = '1111' WHERE ap_ca_id = ";
+            osSQL << pIn->acct_id << "ap_acl = '" << buff << "'";
+            //TODO: free buff?
+            jsonArr = sendQuery( 1, osSQL.str().c_str() );
+            (void) jsonArr;
+        } else {
+            //reset stringstream
+            osSQL = std::ostringstream();
+            osSQL << "UPDATE account_permission SET ";
+            osSQL << "ap_acl = '0011' WHERE ap_ca_id = ";
+            osSQL << pIn->acct_id << "ap_acl = '" << buff << "'";
+            //TODO: free buff?
+            jsonArr = sendQuery( 1, osSQL.str().c_str() );
+            (void) jsonArr;
+
+        }
+    } else if( strcmp( pIn->table_name, "address" ) == 0 ) {
+        //ADDRESS TABLE
+        string line2;
+        long ad_id;
+        //Retrieve by customer id
+        if( pIn->c_id != 0 ) {
+            ostringstream osSQL;
+            osSQL << "SELECT ad_line2, ad_id FROM ";
+            osSQL << "address, customer WHERE ad_id = c_ad_id AND ";
+            osSQL << "c_id = " << pIn->c_id;
+            std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+            line2 = jsonArr->at(0)->get("ad_line2", "").asString();
+            ad_id = jsonArr->at(0)->get("ad_id", "").asInt64();
+            //TODO: free jsonArr
+        //Retrieve by company id
+        } else {
+            ostringstream osSQL;
+            osSQL << "SELECT ad_line2, ad_id FROM address, company ";
+            osSQL << "WHERE ad_id = co_ad_id AND ";
+            osSQL << "co_id = " << pIn->co_id;
+            std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+            line2 = jsonArr->at(0)->get("ad_line2", "").asString();
+            ad_id = jsonArr->at(0)->get("ad_id", "").asInt64();
+            //TODO: free jsonArr
+        }
+        //Toggle line2 entry
+        if( strcmp(line2.c_str(), "Apt. 10C") != 0 ) {
+            ostringstream osSQL;
+            osSQL << "UPDATE address SET ad_line2 ";
+            osSQL << "= 'Apt. 10C' WHERE ad_id = ";
+            osSQL << ad_id;
+            std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+            (void) jsonArr; //dodge compiler warning unused
+            //TODO: free jsonArr
+        } else {
+            ostringstream osSQL;
+            osSQL << "UPDATE address SET ad_line2 ";
+            osSQL << "= 'Apt. 22' WHERE ad_id = ";
+            osSQL << ad_id;
+            std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+            (void) jsonArr; //dodge compiler warning unused
+            //TODO: free jsonArr
+        }
+    } else if( strcmp( pIn->table_name, "company" ) ) {
+        //COMPANY TABLE
+        ostringstream osSQL;
+        osSQL << "SELECT co_sp_rate FROM company ";
+        osSQL << "WHERE co_id = " << pIn->co_id;
+        std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+        string sp_rate = jsonArr->at(0)->get("co_sp_rate", "").asString();
+        //TODO: free jsonArr
+        if( strcmp( sp_rate.c_str(), "ABA" ) != 0 ) {
+            osSQL = std::ostringstream(); //reset stream
+            osSQL << "UPDATE company SET co_sp_rate = ";
+            osSQL << "'ABA' WHERE co_id " << pIn->co_id;
+            jsonArr = sendQuery( 1, osSQL.str().c_str() );
+            //TODO: free jsonArr
+            (void) jsonArr;
+        } else {
+            osSQL = std::ostringstream(); //reset stream
+            osSQL << "UPDATE company SET co_sp_rate = ";
+            osSQL << "'AAA' WHERE co_id " << pIn->co_id;
+            jsonArr = sendQuery( 1, osSQL.str().c_str() );
+            //TODO: free jsonArr
+            (void) jsonArr;
+        }
+    } else if( strcmp( pIn->table_name, "customer" ) == 0 ) {
+        //CUSTOMER TABLE
+        int lenMindSpring = strlen("@mindspring.com");
+        ostringstream osSQL;
+        osSQL << "SELECT c_email_2 FROM customer WHERE ";
+        osSQL << "c_id = " << pIn->c_id;
+        std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+        string email2 = jsonArr->at(0)->get("c_email_2", "").asString();
+        int email2Len = strlen(email2.c_str());
+        //TODO: free jsonArr
+        //If our email is longer, just check the domain name on the email
+        if ( ( email2Len - lenMindSpring ) > 0 &&
+             ( strcmp( email2.c_str() + (email2Len-lenMindSpring-1), "@mindspring.com" ) == 0 ) )  {
+            osSQL = std::ostringstream(); //reset
+            osSQL << "UPDATE customer SET c_email_2 = ";
+            osSQL << "substring(c_email_2, 1, charindex('@', c_email_2) ) + '@earthlink.com' ";
+            osSQL << "WHERE c_id = " << pIn->c_id;
+            jsonArr = sendQuery( 1, osSQL.str().c_str() );
+            //TODO: free jsonArr
+            (void) jsonArr;
+        } else {
+            osSQL = std::ostringstream(); //reset
+            osSQL << "UPDATE customer SET c_email_2 = ";
+            osSQL << "substring(c_email_2, 1, charindex('@', c_email_2) ) + '@mindspring.com' ";
+            osSQL << "WHERE c_id = " << pIn->c_id;
+            jsonArr = sendQuery( 1, osSQL.str().c_str() );
+            //TODO: free jsonArr
+            (void) jsonArr;
+        }
+    } else if( strcmp( pIn->table_name, "customer_taxrate" ) == 0 ) {
+        ostringstream osSQL;
+        osSQL << "SELECT cx_tx_id FROM customer_taxrate ";
+        osSQL << "WHERE cx_c_id = " << pIn->c_id << " AND ";
+        osSQL << "(cx_tx_id LIKE 'US\%' OR cx_tx_id LIKE 'CN\%')";
+        std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+        string cx_tx_id = jsonArr->at(0)->get("cx_tx_id", "").asString();
+        //TODO: free jsonArr
+        string upd_cx_tx_id;
+        if( strncmp(cx_tx_id.c_str(), "US", 2 ) == 0 ) {
+            if( strcmp( cx_tx_id.c_str(), "US1" ) == 0 ) {
+                upd_cx_tx_id = "US2";
+            } else if( strcmp( cx_tx_id.c_str(), "US2" ) == 0 ) {
+                upd_cx_tx_id = "US3";
+            } else if( strcmp( cx_tx_id.c_str(), "US3" ) == 0 ) {
+                upd_cx_tx_id = "US4";
+            } else if( strcmp( cx_tx_id.c_str(), "US4" ) == 0 ) {
+                upd_cx_tx_id = "US5";
+            } else if( strcmp( cx_tx_id.c_str(), "US5" ) == 0 ) {
+                upd_cx_tx_id = "US1";
+            }
+        } else {
+            if( strcmp( cx_tx_id.c_str(), "CN1" ) == 0 ) {
+                upd_cx_tx_id = "CN2";
+            } else if( strcmp( cx_tx_id.c_str(), "US2" ) == 0 ) {
+                upd_cx_tx_id = "CN3";
+            } else if( strcmp( cx_tx_id.c_str(), "CN3" ) == 0 ) {
+                upd_cx_tx_id = "CN4";
+            } else if( strcmp( cx_tx_id.c_str(), "CN4" ) == 0 ) {
+                upd_cx_tx_id = "CN1";
+            }
+
+        }
+        osSQL = std::ostringstream();
+        osSQL << "UPDATE customer_taxrate SET cx_tx_id = '";
+        osSQL << upd_cx_tx_id << "' WHERE cx_c_id = ";
+        osSQL << pIn->c_id << " AND cx_tx_id = '" << cx_tx_id << "'";
+        jsonArr = sendQuery( 1, osSQL.str().c_str() );
+        //TODO: free jsonArr
+        (void) jsonArr;
+    }
+    //TODO: continue adding tables
+    //Daily Market, Exchange, Financial, News_Item, Taxrate, Watch_Item
 }
 
 void TxnRestDB::execute( const TMarketFeedFrame1Input *pIn,
