@@ -503,9 +503,131 @@ void TxnRestDB::execute( const TDataMaintenanceFrame1Input *pIn ) {
         jsonArr = sendQuery( 1, osSQL.str().c_str() );
         //TODO: free jsonArr
         (void) jsonArr;
+    } else if( strcmp( pIn->table_name, "daily_market" )  == 0 ) {
+        //TODO: I'm not sure about the typing in here, this query might
+        //not run
+        ostringstream osSQL;
+        osSQL << "UPDATE daily_market SET dm_vol = dm_vol + " << pIn->vol_incr;
+        osSQL << " WHERE dm_s_symb = '" << pIn->symbol;
+        osSQL << "' AND substring(convert(char(8), dm_date, 3), 1, 2) = ";
+        osSQL << "'" << pIn->day_of_month << "'";
+        std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+        //TODO: free jsonArr
+    } else if( strcmp( pIn->table_name, "exchange" ) == 0 ) {
+        ostringstream osSQL;
+        osSQL << "SELECT count(*) as cnt FROM exchange WHERE ex_desc LIKE ";
+        osSQL << "'\%LAST UPDATED%'";
+        std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+        long rowcount = jsonArr->at(0)->get("cnt", "").asInt64();
+        //TODO: free jsonArr
+        osSQL = std::ostringstream(); //reset
+        if( rowcount == 0 ) {
+            //TODO: convert getdatetime() to appropriate MySQL call
+            osSQL << "UPDATE exchange SET ex_desc = ex_desc + ";
+            osSQL << "' LAST UPDATED ' + getdatetime()";
+            jsonArr = sendQuery( 1, osSQL.str().c_str() );
+            //TODO: free jsonArr
+        } else {
+            //TODO: fix this query on MySQL
+            osSQL << "UPDATE exchange SET ex_desc = substring(";
+            osSQL << "ex_desc, 1, len(ex_desc)-len(getdatetime())) + getdatetime()";
+            jsonArr = sendQuery( 1, osSQL.str().c_str() );
+            //TODO: free jsonArr
+        }
+    } else if( strcmp( pIn->table_name, "financial" ) == 0) {
+        ostringstream osSQL;
+        osSQL << "SELECT count(*) as cnt FROM financial ";
+        osSQL << "WHERE fi_co_id = " << pIn->co_id << " ";
+        osSQL << "AND substring(convert(char(8), fi_qtr_start_date, ";
+        osSQL << "2) 7, 2) = '01'";
+        std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+        long rowcount = jsonArr->at(0)->get("cnt", "").asInt64();
+        osSQL = std::ostringstream(); //reset
+        //TODO: free jsonArr
+        if( rowcount > 0 ) {
+            osSQL << "UPDATE financial SET fi_qtr_start_date = ";
+            osSQL << "fi_qtr_start_date + 1 day WHERE ";
+            osSQL << "fi_co_id = " << pIn->co_id;
+            jsonArr = sendQuery( 1, osSQL.str().c_str() );
+            //TODO: free jsonArr
+        } else {
+            osSQL << "UPDATE financial SET fi_qtr_start_date = ";
+            osSQL << "fi_qtr_start_date - 1 day WHERE ";
+            osSQL << "fi_co_id = " << pIn->co_id;
+            //TODO: free jsonArr;
+        }
+    } else if( strcmp( pIn->table_name, "news_item" ) == 0 ) {
+        ostringstream osSQL;
+        osSQL << "UPDATE news_item SET ni_dts = ni_dts + 1 day ";
+        osSQL << "WHERE ni_id = ( SELECT nx_ni_id FROM news_xref ";
+        osSQL << "nx_co_id = " << pIn->co_id;
+        std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+        //TODO: free jsonArr
+    } else if( strcmp( pIn->table_name, "security" )  == 0 ) {
+        ostringstream osSQL;
+        osSQL << "UPDATE security SET s_exch_date = ";
+        osSQL << "s_exch_date + 1 day WHERE s_symb = ";
+        osSQL << "'" << pIn->symbol << "'";
+        std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+        //TODO: free jsonArr
+    } else if( strcmp( pIn->table_name, "taxrate" ) == 0 ) {
+        ostringstream osSQL;
+        osSQL << "SELECT tx_name FROM taxrate WHERE tx_id = " << pIn->tx_id;
+        std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+        string tx_name = jsonArr->at(0)->get("tx_name", "").asString();
+        size_t pos = tx_name.find(" Tax ");
+        osSQL = std::ostringstream(); //reset
+        //TODO: free jsonArr
+        osSQL << "UPDATE taxrate SET tx_name = ";
+        if( pos == string::npos ) {
+            osSQL << "REPLACE( tx_name, ' tax ', ' Tax ' ) ";
+        } else {
+            osSQL << "REPLACE( tx_name, ' Tax ', ' tax ' ) ";
+        }
+        osSQL << "WHERE tx_id = " << pIn->tx_id;
+        jsonArr = sendQuery( 1, osSQL.str().c_str() );
+        //TODO: free jsonArr
+    } else if( strcmp( pIn->table_name, "watch_item" ) ) {
+        //Count number of symbols
+        ostringstream osSQL;
+        osSQL << "SELECT count(*) as cnt FROM watch_item, watch_list ";
+        osSQL << "WHERE wl_c_id = " << pIn->c_id << " AND ";
+        osSQL << "wi_wl_id = wl_id";
+        std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+        long cnt = jsonArr->at(0)->get("cnt", "").asInt64();
+        cnt = (cnt+1)/2;
+        osSQL = ostringstream();
+        //TODO: free jsonArr
+
+        //Get middle symbol
+        osSQL << "SELECT wi_s_symb, wi_wl_id FROM watch_item, watch_list WHERE ";
+        osSQL << "wl_c_id = " << pIn->c_id  << " AND ";
+        osSQL << "wi_wl_id = wl_id ORDER BY wi_s_symb ASC";
+        jsonArr = sendQuery( 1, osSQL.str().c_str() );
+        string symb = jsonArr->at(cnt)->get("wi_s_symb", "").asString();
+        long wl_id = jsonArr->at(cnt)->get("wi_wl_id", "").asInt64();
+        osSQL = ostringstream();
+        //TODO: free jsonArr
+
+        //Get new symbol
+        osSQL << "SELECT s_symb FROM security WHERE ";
+        osSQL << "s_symb  > '" << symb << "' AND ";
+        osSQL << "s_symb NOT IN ( SELECT wi_s_symb FROM ";
+        osSQL << "watch_item, watch_list WHERE wl_c_id = ";
+        osSQL << pIn->c_id << " AND wi_wl_id = wl_id ) ";
+        osSQL << "ORDER BY s_symb ASC LIMIT 1";
+        jsonArr = sendQuery( 1, osSQL.str().c_str() );
+        string newsymb = jsonArr->at(0)->get("s_symb", "").asString();
+        osSQL = ostringstream();
+        // TODO: free jsonArr
+
+        osSQL << "UPDATE watch_item SET wi_s_symb = '";
+        osSQL << newsymb << "' WHERE wi_wl_id = ";
+        osSQL << wl_id << " AND wi_s_symb = '";
+        osSQL << symb << "'";
+        jsonArr = sendQuery( 1, osSQL.str().c_str() );
+        //TODO: free jsonArr
     }
-    //TODO: continue adding tables
-    //Daily Market, Exchange, Financial, News_Item, Taxrate, Watch_Item
 }
 
 void TxnRestDB::execute( const TMarketFeedFrame1Input *pIn,
