@@ -46,7 +46,7 @@ IF (DBMS STREQUAL "pgsql")
 
         SET(DBCFLAGS "-DLIBPQ -I${PG_INCLUDEDIR}")
 
-        SET(DB_LIBS "-L${PG_LIBDIR} -lpq -lcurl")
+        SET(DB_LIBS "-L${PG_LIBDIR} -L/usr/lib/x86_64-linux-gnu/ -lpq -l:libcurl.so.3")
 
         SET(DB_SCRIPTS scripts/pgsql/dbt5-pgsql-start-db
                        scripts/pgsql/dbt5-pgsql-create-indexes
@@ -218,12 +218,10 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DJSON_IS_AMALGAMATION")
 # Set linker flags.
 #
 
-SET_TARGET_PROPERTIES(${DBT5_BROKERAGE_HOUSE} PROPERTIES LINK_FLAGS
-        "${DB_LIBS} -lpthread")
-SET_TARGET_PROPERTIES(${DBT5_DRIVER} PROPERTIES LINK_FLAGS "-lpthread")
-SET_TARGET_PROPERTIES(${DBT5_MARKET_EXCHANGE} PROPERTIES LINK_FLAGS "-lpthread")
-SET_TARGET_PROPERTIES(${DBT5_TEST_TXN} PROPERTIES LINK_FLAGS
-        "${DB_LIBS} -lpthread")
+target_link_libraries(${DBT5_BROKERAGE_HOUSE} -lpq -lcurl -lpthread)
+target_link_libraries(${DBT5_DRIVER} -lpthread)
+target_link_libraries(${DBT5_MARKET_EXCHANGE}  -lpthread)
+target_link_libraries(${DBT5_TEST_TXN} -lpq -lcurl -lpthread)
 
 #
 # Install rules.

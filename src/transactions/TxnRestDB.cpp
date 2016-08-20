@@ -155,7 +155,7 @@ std::vector<Json::Value *> *TxnRestDB::sendQuery( int clientId, string query ){
 
     //Have the write callback set this ptr to the allocated data
     std::vector<Json::Value *> *resultArr = NULL;
-    curl_easy_setopt( curl, CURLOPT_POSTFIELDS, os.str() );
+    curl_easy_setopt( curl, CURLOPT_POSTFIELDS, os.str().c_str() );
     curl_easy_setopt( curl, CURLOPT_WRITEFUNCTION, write_callback );
     curl_easy_setopt( curl, CURLOPT_WRITEDATA, (void *) (&resultArr) );
     res = curl_easy_perform( curl );
@@ -220,7 +220,8 @@ void TxnRestDB::execute( const TCustomerPositionFrame1Input *pIn,
         pOut->cust_id = jsonArr->at(0)->get( "cust_id", "" ).asInt64();
         //TODO: free jsonArr
         //Reset stringstream
-        osSQL = std::ostringstream();
+        osSQL.clear();	
+        osSQL.str("");
     }
 
     //Retrieve Customer Fields
@@ -287,7 +288,8 @@ void TxnRestDB::execute( const TCustomerPositionFrame1Input *pIn,
 
     //TODO: free jsonArr
     //Reset stringstream
-    osSQL = std::ostringstream();
+    osSQL.clear();
+    osSQL.str("");
 
     //Now retrieve account information
     osSQL << "SELECT ca_id as acct_id, ca_bal as cash_bal, ";
@@ -350,7 +352,8 @@ void TxnRestDB::execute( const TDataMaintenanceFrame1Input *pIn ) {
         //TODO: free jsonArr
         if( strcmp( buff, "1111" ) != 0 ) {
             //reset stringstream
-            osSQL = std::ostringstream();
+            osSQL.clear();
+            osSQL.str("");	
             osSQL << "UPDATE account_permission SET ";
             osSQL << "ap_acl = '1111' WHERE ap_ca_id = ";
             osSQL << pIn->acct_id << "ap_acl = '" << buff << "'";
@@ -359,7 +362,9 @@ void TxnRestDB::execute( const TDataMaintenanceFrame1Input *pIn ) {
             (void) jsonArr;
         } else {
             //reset stringstream
-            osSQL = std::ostringstream();
+            osSQL.clear();
+            osSQL.str("");	
+
             osSQL << "UPDATE account_permission SET ";
             osSQL << "ap_acl = '0011' WHERE ap_ca_id = ";
             osSQL << pIn->acct_id << "ap_acl = '" << buff << "'";
@@ -420,14 +425,16 @@ void TxnRestDB::execute( const TDataMaintenanceFrame1Input *pIn ) {
         string sp_rate = jsonArr->at(0)->get("co_sp_rate", "").asString();
         //TODO: free jsonArr
         if( strcmp( sp_rate.c_str(), "ABA" ) != 0 ) {
-            osSQL = std::ostringstream(); //reset stream
+            osSQL.clear();
+            osSQL.str("");
             osSQL << "UPDATE company SET co_sp_rate = ";
             osSQL << "'ABA' WHERE co_id " << pIn->co_id;
             jsonArr = sendQuery( 1, osSQL.str().c_str() );
             //TODO: free jsonArr
             (void) jsonArr;
         } else {
-            osSQL = std::ostringstream(); //reset stream
+            osSQL.clear();
+            osSQL.str("");
             osSQL << "UPDATE company SET co_sp_rate = ";
             osSQL << "'AAA' WHERE co_id " << pIn->co_id;
             jsonArr = sendQuery( 1, osSQL.str().c_str() );
@@ -447,7 +454,8 @@ void TxnRestDB::execute( const TDataMaintenanceFrame1Input *pIn ) {
         //If our email is longer, just check the domain name on the email
         if ( ( email2Len - lenMindSpring ) > 0 &&
              ( strcmp( email2.c_str() + (email2Len-lenMindSpring-1), "@mindspring.com" ) == 0 ) )  {
-            osSQL = std::ostringstream(); //reset
+            osSQL.clear();
+            osSQL.str("");
             osSQL << "UPDATE customer SET c_email_2 = ";
             osSQL << "substring(c_email_2, 1, charindex('@', c_email_2) ) + '@earthlink.com' ";
             osSQL << "WHERE c_id = " << pIn->c_id;
@@ -455,7 +463,9 @@ void TxnRestDB::execute( const TDataMaintenanceFrame1Input *pIn ) {
             //TODO: free jsonArr
             (void) jsonArr;
         } else {
-            osSQL = std::ostringstream(); //reset
+            osSQL.clear();
+            osSQL.str("");
+
             osSQL << "UPDATE customer SET c_email_2 = ";
             osSQL << "substring(c_email_2, 1, charindex('@', c_email_2) ) + '@mindspring.com' ";
             osSQL << "WHERE c_id = " << pIn->c_id;
@@ -496,7 +506,8 @@ void TxnRestDB::execute( const TDataMaintenanceFrame1Input *pIn ) {
             }
 
         }
-        osSQL = std::ostringstream();
+        osSQL.clear();
+        osSQL.str("");
         osSQL << "UPDATE customer_taxrate SET cx_tx_id = '";
         osSQL << upd_cx_tx_id << "' WHERE cx_c_id = ";
         osSQL << pIn->c_id << " AND cx_tx_id = '" << cx_tx_id << "'";
@@ -520,7 +531,8 @@ void TxnRestDB::execute( const TDataMaintenanceFrame1Input *pIn ) {
         std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
         long rowcount = jsonArr->at(0)->get("cnt", "").asInt64();
         //TODO: free jsonArr
-        osSQL = std::ostringstream(); //reset
+        osSQL.clear();
+        osSQL.str("");
         if( rowcount == 0 ) {
             //TODO: convert getdatetime() to appropriate MySQL call
             osSQL << "UPDATE exchange SET ex_desc = ex_desc + ";
@@ -542,7 +554,8 @@ void TxnRestDB::execute( const TDataMaintenanceFrame1Input *pIn ) {
         osSQL << "2) 7, 2) = '01'";
         std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
         long rowcount = jsonArr->at(0)->get("cnt", "").asInt64();
-        osSQL = std::ostringstream(); //reset
+        osSQL.clear();
+        osSQL.str("");
         //TODO: free jsonArr
         if( rowcount > 0 ) {
             osSQL << "UPDATE financial SET fi_qtr_start_date = ";
@@ -576,7 +589,8 @@ void TxnRestDB::execute( const TDataMaintenanceFrame1Input *pIn ) {
         std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
         string tx_name = jsonArr->at(0)->get("tx_name", "").asString();
         size_t pos = tx_name.find(" Tax ");
-        osSQL = std::ostringstream(); //reset
+        osSQL.clear();
+        osSQL.str("");
         //TODO: free jsonArr
         osSQL << "UPDATE taxrate SET tx_name = ";
         if( pos == string::npos ) {
@@ -596,7 +610,9 @@ void TxnRestDB::execute( const TDataMaintenanceFrame1Input *pIn ) {
         std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
         long cnt = jsonArr->at(0)->get("cnt", "").asInt64();
         cnt = (cnt+1)/2;
-        osSQL = ostringstream();
+        osSQL.clear(); //reset
+        osSQL.str("");
+
         //TODO: free jsonArr
 
         //Get middle symbol
@@ -606,7 +622,9 @@ void TxnRestDB::execute( const TDataMaintenanceFrame1Input *pIn ) {
         jsonArr = sendQuery( 1, osSQL.str().c_str() );
         string symb = jsonArr->at(cnt)->get("wi_s_symb", "").asString();
         long wl_id = jsonArr->at(cnt)->get("wi_wl_id", "").asInt64();
-        osSQL = ostringstream();
+
+        osSQL.clear(); //reset
+        osSQL.str("");
         //TODO: free jsonArr
 
         //Get new symbol
@@ -618,7 +636,8 @@ void TxnRestDB::execute( const TDataMaintenanceFrame1Input *pIn ) {
         osSQL << "ORDER BY s_symb ASC LIMIT 1";
         jsonArr = sendQuery( 1, osSQL.str().c_str() );
         string newsymb = jsonArr->at(0)->get("s_symb", "").asString();
-        osSQL = ostringstream();
+        osSQL.clear(); //reset
+        osSQL.str("");
         // TODO: free jsonArr
 
         osSQL << "UPDATE watch_item SET wi_s_symb = '";
@@ -658,7 +677,8 @@ void TxnRestDB::execute( const TMarketFeedFrame1Input *pIn,
 
         rows_updated += jsonArr->at(0)->get( "rows_modified", "" ).asInt64();
 
-        osSQL = std::ostringstream();
+        osSQL.clear();
+        osSQL.str("");
         osSQL << "SELECT tr_t_id, tr_bid_price, tr_tt_id, ";
         osSQL << "tr_qty FROM trade_request WHERE tr_s_symb = '";
         osSQL << pIn->Entries[i].symbol << "' AND ( (tr_tt_id = '";
@@ -671,7 +691,8 @@ void TxnRestDB::execute( const TMarketFeedFrame1Input *pIn,
         osSQL << ") )";
         jsonArr = sendQuery( 1, osSQL.str().c_str() );
         //TODO: free jsonArr
-        osSQL = ostringstream();
+        osSQL.clear();
+        osSQL.str("");
 
         for( unsigned j = 0; j < jsonArr->size(); j++ ) {
             osSQL << "UPDATE trade SET t_dts = getdatetime(), ";
@@ -690,7 +711,9 @@ void TxnRestDB::execute( const TMarketFeedFrame1Input *pIn,
             osSQL << "' AND tr_qty = ";
             osSQL << jsonArr->at(j)->get( "tr_qty", "").asInt();
             arr = sendQuery( 1, osSQL.str().c_str() );
-            osSQL = ostringstream();
+            osSQL.clear();
+            osSQL.str("");
+
             //TODO: free arr
 
             osSQL << "INSERT INTO trade_history VALUES ( ";
@@ -700,7 +723,8 @@ void TxnRestDB::execute( const TMarketFeedFrame1Input *pIn,
             osSQL << ", '" << pIn->StatusAndTradeType.status_submitted;
             osSQL << "' )";
             arr = sendQuery( 1, osSQL.str().c_str() );
-            osSQL = ostringstream();
+            osSQL.clear();
+            osSQL.str("");
             //TODO: free arr
 
             TTradeRequest req;
@@ -709,10 +733,16 @@ void TxnRestDB::execute( const TMarketFeedFrame1Input *pIn,
             req.trade_qty = jsonArr->at(j)->get( "tr_qty", "" ).asInt();
             strncpy( req.symbol, pIn->Entries[i].symbol, cSYMBOL_len );
             req.symbol[cSYMBOL_len] = '\0';
-            //TODO: finish pushing in req fields
+            strncpy(req.trade_type_id, jsonArr->at(j)->get( "tr_tt_id", "").asCString(), cTT_ID_len);
+            req.trade_type_id[cTT_ID_len] = '\0';
+
             vec.push_back( req );
         }
-        //Add vec to sendtomarket thing
+        bool bSent;
+        for( unsigned j = 0; j < vec.size(); j++ ) {
+            //Send to market
+            bSent = pMarketExchange->SendToMarketFromFrame( vec.at(j) );
+        }
 
     }
     for (unsigned int i = 0;
