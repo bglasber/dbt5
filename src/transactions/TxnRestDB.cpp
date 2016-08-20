@@ -635,7 +635,86 @@ void TxnRestDB::execute( const TMarketFeedFrame1Input *pIn,
                          CSendToMarketInterface *pMarketExchange ) {
 
     ostringstream osSymbol, osPrice, osQty;
+    std::vector<TTradeRequest> vec;
 
+    //All these getdatetime()s are supposed to have the same value.
+    //I'm not sure how much this matters to the spec
+    long rows_updated = 0;
+    long rows_sent = 0;
+    for( unsigned int i = 0; i < max_feed_len; i++ ) { 
+        ostringstream osSQL;
+        osSQL << "UPDATE last_trade SET lt_price = ";
+        osSQL << pIn->Entries[i].price_quote << ", ";
+        osSQL << "lt_vol = lt_vol + " << pIn->Entries[i].trade_qty;
+        osSQL << ", lt_dts = getdatetime() WHERE lt_s_symb = '";
+        osSQL << pIn->Entries[i].symbol << "'";
+        std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+
+        osSQL << "SELECT count(*) as rows_modified FROM ";
+        osSQL << "last_trade WHERE lt_s_symb = '";
+        osSQL << pIn->Entries[i].symbol << "'";
+        jsonArr = sendQuery( 1, osSQL.str().c_str() );
+        //TODO: free jsonArr
+
+        rows_updated += jsonArr->at(0)->get( "rows_modified", "" ).asInt64();
+
+        osSQL = std::ostringstream();
+        osSQL << "SELECT tr_t_id, tr_bid_price, tr_tt_id, ";
+        osSQL << "tr_qty FROM trade_request WHERE tr_s_symb = '";
+        osSQL << pIn->Entries[i].symbol << "' AND ( (tr_tt_id = '";
+        osSQL << pIn->StatusAndTradeType.type_stop_loss << "' AND ";
+        osSQL << "tr_bid_price >= " << pIn->Entries[i].price_quote << ") OR ";
+        osSQL << "(tr_tt_id = '" << pIn->StatusAndTradeType.type_limit_sell;
+        osSQL << "' AND tr_bid_price <= " << pIn->Entries[i].price_quote << ") OR ";
+        osSQL << "(tr_tt_id = '" << pIn->StatusAndTradeType.type_limit_buy;
+        osSQL << "' AND tr_bid_price >= " << pIn->Entries[i].price_quote;
+        osSQL << ") )";
+        jsonArr = sendQuery( 1, osSQL.str().c_str() );
+        //TODO: free jsonArr
+        osSQL = ostringstream();
+
+        for( unsigned j = 0; j < jsonArr->size(); j++ ) {
+            osSQL << "UPDATE trade SET t_dts = getdatetime(), ";
+            osSQL << "t_st_id = '" << pIn->StatusAndTradeType.status_submitted;
+            osSQL << "' WHERE t_id = ";
+            osSQL << jsonArr->at(j)->get("tr_t_id", "").asInt64();
+
+            std::vector<Json::Value *> *arr = sendQuery( 1, osSQL.str().c_str() );
+            //TODO: free arr
+            osSQL << "DELETE FROM trade_request WHERE tr_t_id = ";
+            osSQL << jsonArr->at(j)->get( "tr_t_id", "").asInt64();
+            osSQL << " AND tr_bid_price = ";
+            osSQL << jsonArr->at(j)->get( "tr_bid_price", "" ).asFloat();
+            osSQL << " AND tr_tt_id = '";
+            osSQL << jsonArr->at(j)->get( "tr_tt_id", "" ).asString();
+            osSQL << "' AND tr_qty = ";
+            osSQL << jsonArr->at(j)->get( "tr_qty", "").asInt();
+            arr = sendQuery( 1, osSQL.str().c_str() );
+            osSQL = ostringstream();
+            //TODO: free arr
+
+            osSQL << "INSERT INTO trade_history VALUES ( ";
+            osSQL << jsonArr->at(j)->get( "tr_t_id", "").asInt64();
+            osSQL << "," << jsonArr->at(j)->get("tr_bid_price", "").asFloat();
+            osSQL << ", getdatetime()";
+            osSQL << ", '" << pIn->StatusAndTradeType.status_submitted;
+            osSQL << "' )";
+            arr = sendQuery( 1, osSQL.str().c_str() );
+            osSQL = ostringstream();
+            //TODO: free arr
+
+            TTradeRequest req;
+            req.price_quote = jsonArr->at(j)->get( "tr_bid_price", "" ).asFloat();
+            req.trade_id = jsonArr->at(j)->get( "tr_id", "" ).asInt64();
+            req.trade_qty = jsonArr->at(j)->get( "tr_qty", "" ).asInt();
+            strncpy( req.symbol, pIn->Entries[i].symbol, cSYMBOL_len );
+            req.symbol[cSYMBOL_len] = '\0';
+            //TODO: finish pushing in req fields
+            vec.push_back( req );
+        }
+        //Add vec to sendtomarket thing
+
+    }
     for (unsigned int i = 0;
             i < (sizeof(pIn->Entries) / sizeof(pIn->Entries[0])); ++i) {
         if (i == 0) {
