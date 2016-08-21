@@ -805,19 +805,67 @@ void TxnRestDB::execute( const TMarketWatchFrame1Input *pIn,
 void TxnRestDB::execute( const TSecurityDetailFrame1Input *pIn,
                          TSecurityDetailFrame1Output *pOut ) {
     ostringstream osSQL;
-    osSQL << "SELECT * FROM SecurityDetailFrame1(" <<
-        (pIn->access_lob_flag == 0 ? "false" : "true") << "," <<
-        pIn->max_rows_to_return << ",'" <<
-        pIn->start_day.year << "-" <<
-        pIn->start_day.month << "-" <<
-        pIn->start_day.day << "','" <<
-        pIn->symbol << "')";
 
+    //Unrolled sproc
+    //TODO: might be missing some out fields...
+
+    //TODO: almost certainly typos in here, not sure about join interations with json, expect errors
+    osSQL << "SELECT s_name, co_id, co_name, co_sp_rate, co_ceo, co_desc, co_open_date, co_st_id, ca.ad_line1, ";
+    osSQL << "ca.ad_line2, zca.zc_town, zca.zc_div, ca.ad_zc_code, ca.ad_ctry, s_num_out, s_start_date, s_exch_date, ";
+    osSQL << "s_pe, s_52wk_high, s_52wk_high_date, s_52wk_low, s_52wk_low_date, s_dividend, s_yield, zea.zc_div, ";
+    osSQL << "ea.ad_ctry, ea.ad_line1, ea.ad_line2, zea.zc_town, ea.ad_zc_code, ex_close, ex_desc, ex_name, ex_num_symb, ";
+    osSQL << "ex_open FROM security, company, address ca, address ea, zip_code zca, zip_code zea, exchange  WHERE ";
+    osSQL << "s_symb = '" << pIn->symbol << "' AND co_id = s_co_id AND ca.ad_id = co_ad_id AND ea.ad_id = ex_ad_id AND ";
+    osSQL << "ex_id = s_ex_id AND ca.ad_zc_code = zca.zc_code AND ea.ad_zc_code = zea.zc_code";
     std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
 
-    pOut->fin_len = jsonArr->at(0)->get("fin_len", "").asInt();
-    pOut->day_len = jsonArr->at(0)->get("day_len", "").asInt();
-    pOut->news_len = jsonArr->at(0)->get("news_len", "").asInt();
+    osSQL.clear();
+    osSQL.str("");
+    osSQL << "SELECT co_name, in_name FROM company_competitor, company, industry WHERE ";
+    osSQL << "cp_co_id = " << jsonArr->at(0)->get("co_id", "").asInt64() << " AND ";
+    osSQL << "co_id = cp_comp_co_id AND in_id = cp_in_id LIMIT 3";
+    std::vector<Json::Value *> *namesArr = sendQuery( 1, osSQL.str().c_str() );
+
+    osSQL.str("");
+    osSQL << "SELECT fi_year, fi_qtr, fi_qtr_start_date, fi_revenue, fi_net_earn, fi_basic_eps, fi_dilut_eps, "; 
+    osSQL << "fi_margin, fi_inventory, fi_assets, fi_liability, fi_out_basic, fi_out_dilut FROM financial WHERE ";
+    osSQL << "fi_co_id = " << jsonArr->at(0)->get("co_id", "").asInt64() << " ORDER BY fi_year ASC, fi_qtr LIMIT 120";
+    std::vector<Json::Value *> *fiArr = sendQuery( 1, osSQL.str().c_str() );
+    long fin_len = fiArr->size();
+
+    osSQL.clear();
+    osSQL.str("");
+    osSQL << "SELECT dm_date, dm_close, dm_high, dm_low, dm_vol FROM daily_market ";
+    osSQL << "dm_s_symb = '"  << pIn->symbol << "' AND dm_date >= " << jsonArr->at(0)->get("s_start_date", "").asString();
+    osSQL << " ORDER BY dm_date ASC LIMIT " << pIn->max_rows_to_return;  
+    std::vector<Json::Value *> *dmArr = sendQuery( 1, osSQL.str().c_str() );
+    long day_len = dmArr->size();
+    
+    osSQL.clear();
+    osSQL.str("");
+    osSQL << "SELECT lt_price, lt_open_price, lt_vol FROM last_trade WHERE lt_s_symb = '";
+    osSQL << pIn->symbol << "'";
+    std::vector<Json::Value *> *ltArr = sendQuery( 1, osSQL.str().c_str() );
+
+    std::vector<Json::Value *> *newsArr;
+    if( pIn->access_lob_flag ) {
+        osSQL.clear();
+        osSQL.str("");
+        osSQL << "SELECT ni_item, ni_dts, ni_source, ni_author, '' as ni_headline, '' as ni_summary FROM news_xref, news_item "; 
+        osSQL << "ni_id = nx_ni_id AND nx_co_id = " << jsonArr->at(0)->get( "co_id", "" ).asInt64() << " LIMIT 2";
+        newsArr = sendQuery( 1, osSQL.str().c_str() );
+    } else {
+        osSQL.clear();
+        osSQL.str("");
+        osSQL << "SELECT  '' as ni_item, ni_dts, ni_source, ni_author, ni_headline, ni_summary FROM news_xref, news_item "; 
+        osSQL << "ni_id = nx_ni_id AND nx_co_id = " << jsonArr->at(0)->get( "co_id", "" ).asInt64() <<  " LIMIT 2";
+        newsArr = sendQuery( 1, osSQL.str().c_str() );
+    }
+    long news_len = newsArr->size();
+
+    pOut->fin_len = fin_len;
+    pOut->day_len = day_len;
+    pOut->news_len = news_len;
 
     pOut->s52_wk_high = jsonArr->at(0)->get("s52_wk_high", "").asFloat();
     sscanf(jsonArr->at(0)->get("s52_wk_high_date","").asCString(), "%hd-%hd-%hd",
@@ -830,19 +878,19 @@ void TxnRestDB::execute( const TSecurityDetailFrame1Input *pIn,
             &pOut->s52_wk_low_date.month,
             &pOut->s52_wk_low_date.day);
 
-    strncpy(pOut->ceo_name, jsonArr->at(0)->get("ceo_name", "").asCString(), cCEO_NAME_len);
+    strncpy(pOut->ceo_name, jsonArr->at(0)->get("co_ceo", "").asCString(), cCEO_NAME_len);
     pOut->ceo_name[cCEO_NAME_len] = '\0';
-    strncpy(pOut->co_ad_cty, jsonArr->at(0)->get("co_ad_cty", "").asCString(), cAD_CTRY_len);
+    strncpy(pOut->co_ad_cty, jsonArr->at(0)->get("ca.ad_ctry", "").asCString(), cAD_CTRY_len);
     pOut->co_ad_cty[cAD_CTRY_len] = '\0';
-    strncpy(pOut->co_ad_div, jsonArr->at(0)->get("co_ad_div", "").asCString(), cAD_DIV_len);
+    strncpy(pOut->co_ad_div, jsonArr->at(0)->get("zca.zc_div", "").asCString(), cAD_DIV_len);
     pOut->co_ad_div[cAD_DIV_len] = '\0';
-    strncpy(pOut->co_ad_line1, jsonArr->at(0)->get("co_ad_line1", "").asCString(), cAD_LINE_len);
+    strncpy(pOut->co_ad_line1, jsonArr->at(0)->get("ca.ad_line1", "").asCString(), cAD_LINE_len);
     pOut->co_ad_line1[cAD_LINE_len] = '\0';
-    strncpy(pOut->co_ad_line2, jsonArr->at(0)->get("co_ad_line2", "").asCString(), cAD_LINE_len);
+    strncpy(pOut->co_ad_line2, jsonArr->at(0)->get("ca.ad_line2", "").asCString(), cAD_LINE_len);
     pOut->co_ad_line2[cAD_LINE_len] = '\0';
-    strncpy(pOut->co_ad_town, jsonArr->at(0)->get("co_ad_town", "").asCString(), cAD_TOWN_len);
+    strncpy(pOut->co_ad_town, jsonArr->at(0)->get("zca.zc_town", "").asCString(), cAD_TOWN_len);
     pOut->co_ad_town[cAD_TOWN_len] = '\0';
-    strncpy(pOut->co_ad_zip, jsonArr->at(0)->get("co_ad_zip", "").asCString(), cAD_ZIP_len);
+    strncpy(pOut->co_ad_zip, jsonArr->at(0)->get("ca.ad_zc_code", "").asCString(), cAD_ZIP_len);
     pOut->co_ad_zip[cAD_ZIP_len] = '\0';
     strncpy(pOut->co_desc, jsonArr->at(0)->get("co_desc", "").asCString(), cCO_DESC_len);
     pOut->co_desc[cCO_DESC_len] = '\0';
@@ -851,72 +899,41 @@ void TxnRestDB::execute( const TSecurityDetailFrame1Input *pIn,
     strncpy(pOut->co_st_id, jsonArr->at(0)->get("co_st_id", "").asCString(), cST_ID_len);
     pOut->co_st_id[cST_ID_len] = '\0';
 
-    vector<string> vAux;
-    vector<string>::iterator p;
-    TokenizeSmart(jsonArr->at(0)->get("cp_co_name", "").asString(), vAux);
-    int i = 0;
-    for  (p = vAux.begin(); p != vAux.end(); ++p) {
-        strncpy(pOut->cp_co_name[i], (*p).c_str(), cCO_NAME_len);
-        pOut->cp_co_name[i][cCO_NAME_len] = '\0';
-        ++i;
-    }
-    // FIXME: The stored functions for PostgreSQL are designed to return 3
-    // items in the array, even though it's not required.
-    check_count(3, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
-
-    TokenizeSmart(jsonArr->at(0)->get("cp_in_name", "").asString(), vAux);
-    i = 0;
-    for  (p = vAux.begin(); p != vAux.end(); ++p) {
-        strncpy(pOut->cp_in_name[i], (*p).c_str(), cIN_NAME_len);
-        pOut->cp_in_name[i][cIN_NAME_len] = '\0';
-        ++i;
+    for( unsigned j = 0; j < namesArr->size(); j++ ) {
+        strncpy(pOut->cp_co_name[j], namesArr->at(j)->get("co_name", "").asCString(), cCO_NAME_len);
+        strncpy(pOut->cp_in_name[j], namesArr->at(j)->get("in_name", "").asCString(), cIN_NAME_len);
+        pOut->cp_co_name[j][cCO_NAME_len] = '\0';
+        pOut->cp_in_name[j][cIN_NAME_len] = '\0';
     }
 
-    // FIXME: The stored functions for PostgreSQL are designed to return 3
-    // items in the array, even though it's not required.
-    check_count(3, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
 
-    TokenizeArray(jsonArr->at(0)->get("i_day", "").asString(), vAux);
-    i = 0;
-    for  (p = vAux.begin(); p != vAux.end(); ++p) {
-        vector<string> v2;
-        vector<string>::iterator p2;
-
-        TokenizeSmart((*p).c_str(), v2);
-
-        p2 = v2.begin();
-        sscanf((*p2++).c_str(), "%hd-%hd-%hd",
-                &pOut->day[i].date.year,
-                &pOut->day[i].date.month,
-                &pOut->day[i].date.day);
-        pOut->day[i].close = atof((*p2++).c_str());
-        pOut->day[i].high = atof((*p2++).c_str());
-        pOut->day[i].low = atof((*p2++).c_str());
-        pOut->day[i].vol = atoi((*p2++).c_str());
-        ++i;
-        v2.clear();
+    for( unsigned j = 0; j < dmArr->size(); j++ ) {
+        sscanf(dmArr->at(j)->get("dm_date", "").asCString(), "%hd-%hd-%hd",
+                &pOut->day[j].date.year,
+                &pOut->day[j].date.month,
+                &pOut->day[j].date.day);
+        pOut->day[j].close = dmArr->at(j)->get("dm_close", "").asFloat();
+        pOut->day[j].high = dmArr->at(j)->get("dm_high", "").asFloat();
+        pOut->day[j].low = dmArr->at(j)->get("dm_low", "").asFloat();
+        pOut->day[j].vol = dmArr->at(j)->get("dm_vol", "").asFloat();
     }
-    check_count(pOut->day_len, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
 
-    pOut->divid = jsonArr->at(0)->get("divid","").asFloat();
+    pOut->divid = jsonArr->at(0)->get("s_dividend","").asFloat();
 
-    strncpy(pOut->ex_ad_cty, jsonArr->at(0)->get("ex_ad_cty","").asCString(), cAD_CTRY_len);
+    strncpy(pOut->ex_ad_cty, jsonArr->at(0)->get("ea.ad_ctry","").asCString(), cAD_CTRY_len);
     pOut->ex_ad_cty[cAD_CTRY_len] = '\0';
-    strncpy(pOut->ex_ad_div, jsonArr->at(0)->get("ex_ad_div", "").asCString(), cAD_DIV_len);
+    strncpy(pOut->ex_ad_div, jsonArr->at(0)->get("zea.zc_div", "").asCString(), cAD_DIV_len);
     pOut->ex_ad_div[cAD_DIV_len] = '\0';
-    strncpy(pOut->ex_ad_line1, jsonArr->at(0)->get("ex_ad_line1", "").asCString(), cAD_LINE_len);
+    strncpy(pOut->ex_ad_line1, jsonArr->at(0)->get("ea.ad_line1", "").asCString(), cAD_LINE_len);
     pOut->ex_ad_line1[cAD_LINE_len] = '\0';
-    strncpy(pOut->ex_ad_line2, jsonArr->at(0)->get("ex_ad_line2", "").asCString(), cAD_LINE_len);
+    strncpy(pOut->ex_ad_line2, jsonArr->at(0)->get("ea.ad_line2", "").asCString(), cAD_LINE_len);
     pOut->ex_ad_line2[cAD_LINE_len] = '\0';
-    strncpy(pOut->ex_ad_town, jsonArr->at(0)->get("ex_ad_town", "").asCString(), cAD_TOWN_len);
+    strncpy(pOut->ex_ad_town, jsonArr->at(0)->get("zea.zc_town", "").asCString(), cAD_TOWN_len);
     pOut->ex_ad_town[cAD_TOWN_len]  = '\0';
-    strncpy(pOut->ex_ad_zip, jsonArr->at(0)->get("ex_ad_zip", "").asCString(), cAD_ZIP_len);
+    strncpy(pOut->ex_ad_zip, jsonArr->at(0)->get("ea.ad_zc_zip", "").asCString(), cAD_ZIP_len);
     pOut->ex_ad_zip[cAD_ZIP_len] = '\0';
-    pOut->ex_close = jsonArr->at(0)->get("ex_close", "").asInt();
-    sscanf(jsonArr->at(0)->get("ex_date", "").asCString(), "%hd-%hd-%hd",
+    pOut->ex_close = jsonArr->at(0)->get("ex_close", "").asFloat();
+    sscanf(jsonArr->at(0)->get("s_exch_date", "").asCString(), "%hd-%hd-%hd",
             &pOut->ex_date.year,
             &pOut->ex_date.month,
             &pOut->ex_date.day);
@@ -925,93 +942,72 @@ void TxnRestDB::execute( const TSecurityDetailFrame1Input *pIn,
     strncpy(pOut->ex_name, jsonArr->at(0)->get("ex_name", "").asCString(), cEX_NAME_len);
     pOut->ex_name[cEX_NAME_len] = '\0';
     pOut->ex_num_symb = jsonArr->at(0)->get("ex_num_symb", "").asInt();
-    pOut->ex_open = jsonArr->at(0)->get("ex_open", "").asInt();
+    pOut->ex_open = jsonArr->at(0)->get("ex_open", "").asFloat();
 
-    TokenizeArray(jsonArr->at(0)->get("fin", "").asString(), vAux);
-    i = 0;
-    for  (p = vAux.begin(); p != vAux.end(); ++p) {
-        vector<string> v2;
-        vector<string>::iterator p2;
-
-        TokenizeSmart((*p).c_str(), v2);
-
-        p2 = v2.begin();
-        pOut->fin[i].year = atoi((*p2++).c_str());
-        pOut->fin[i].qtr = atoi((*p2++).c_str());
-        sscanf((*p2++).c_str(), "%hd-%hd-%hd",
+    for( unsigned i = 0; i < fiArr->size(); i++ ) {
+        pOut->fin[i].year = fiArr->at(i)->get( "fi_year", "" ).asInt();
+        pOut->fin[i].qtr = fiArr->at(i)->get( "fi_qtr", "").asInt();
+        sscanf( fiArr->at(i)->get( "fi_qtr_start_date", "").asCString(), "%hd-%hd-%hd",
                 &pOut->fin[i].start_date.year,
                 &pOut->fin[i].start_date.month,
                 &pOut->fin[i].start_date.day);
-        pOut->fin[i].rev = atof((*p2++).c_str());
-        pOut->fin[i].net_earn = atof((*p2++).c_str());
-        pOut->fin[i].basic_eps = atof((*p2++).c_str());
-        pOut->fin[i].dilut_eps = atof((*p2++).c_str());
-        pOut->fin[i].margin = atof((*p2++).c_str());
-        pOut->fin[i].invent = atof((*p2++).c_str());
-        pOut->fin[i].assets = atof((*p2++).c_str());
-        pOut->fin[i].liab = atof((*p2++).c_str());
-        pOut->fin[i].out_basic = atof((*p2++).c_str());
-        pOut->fin[i].out_dilut = atof((*p2++).c_str());
-        ++i;
-        v2.clear();
+        pOut->fin[i].rev = fiArr->at(i)->get("fi_revenue","").asFloat(); 
+        pOut->fin[i].net_earn = fiArr->at(i)->get("fi_net_earn","").asFloat();
+        pOut->fin[i].basic_eps = fiArr->at(i)->get("fi_basic_eps", "").asFloat();
+        pOut->fin[i].dilut_eps = fiArr->at(i)->get("fi_dilut_eps", "").asFloat();
+        pOut->fin[i].margin = fiArr->at(i)->get("fi_margin", "").asFloat();
+        pOut->fin[i].invent = fiArr->at(i)->get("fi_inventory", "").asFloat();
+        pOut->fin[i].assets = fiArr->at(i)->get("fi_assets", "").asFloat();
+        pOut->fin[i].liab = fiArr->at(i)->get("fi_liability", "").asFloat();
+        pOut->fin[i].out_basic = fiArr->at(i)->get("fi_out_basic", "").asFloat();
+        pOut->fin[i].out_dilut = fiArr->at(i)->get("fi_out_dilut", "").asFloat();
     }
-    check_count(pOut->fin_len, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
 
-    pOut->last_open = jsonArr->at(0)->get("last_open","").asFloat();
-    pOut->last_price = jsonArr->at(0)->get("last_price", "").asFloat();
-    pOut->last_vol = jsonArr->at(0)->get("last_vol", "").asInt();
+    pOut->last_open = ltArr->at(0)->get("lt_open_price","").asFloat();
+    pOut->last_price = jsonArr->at(0)->get("lt_price", "").asFloat();
+    pOut->last_vol = jsonArr->at(0)->get("lt_vol", "").asInt();
 
-    TokenizeArray(jsonArr->at(0)->get("i_news", "").asString(), vAux);
-    i = 0;
-    for  (p = vAux.begin(); p != vAux.end(); ++p) {
-        vector<string> v2;
-        vector<string>::iterator p2;
+    for( unsigned j = 0; j < fiArr->size(); j++ ) {
+        strncpy(pOut->news[j].item, newsArr->at(j)->get("ni_item", "").asCString(), cNI_ITEM_len);
+        pOut->news[j].item[cNI_ITEM_len] = '\0';
+        sscanf(newsArr->at(j)->get( "ni_dts", "").asCString(), "%hd-%hd-%hd %hd:%hd:%hd",
+                &pOut->news[j].dts.year,
+                &pOut->news[j].dts.month,
+                &pOut->news[j].dts.day,
+                &pOut->news[j].dts.hour,
+                &pOut->news[j].dts.minute,
+                &pOut->news[j].dts.second);
+        strncpy(pOut->news[j].src, newsArr->at(j)->get("ni_source", "").asCString(), cNI_SOURCE_len);
+        pOut->news[j].src[cNI_SOURCE_len] = '\0';
+        strncpy(pOut->news[j].auth, newsArr->at(j)->get("ni_author", "").asCString(), cNI_AUTHOR_len);
+        pOut->news[j].auth[cNI_AUTHOR_len] = '\0';
+        strncpy(pOut->news[j].headline, newsArr->at(j)->get("ni_headline", "").asCString(), cNI_HEADLINE_len);
+        pOut->news[j].headline[cNI_HEADLINE_len] = '\0';
+        strncpy(pOut->news[j].summary, newsArr->at(j)->get("ni_summary","").asCString(), cNI_SUMMARY_len);
+        pOut->news[j].summary[cNI_SUMMARY_len] = '\0';
 
-        TokenizeSmart((*p).c_str(), v2);
-
-        p2 = v2.begin();
-        // FIXME: Postgresql can actually return 5 times the amount of data due
-        // to escaped characters.  Cap the data at the length that EGen defines
-        // it and hope it isn't a problem for continuing the test correctly.
-        strncpy(pOut->news[i].item, (*p2++).c_str(), cNI_ITEM_len);
-        pOut->news[i].item[cNI_ITEM_len] = '\0';
-        sscanf((*p2++).c_str(), "%hd-%hd-%hd %hd:%hd:%hd",
-                &pOut->news[i].dts.year,
-                &pOut->news[i].dts.month,
-                &pOut->news[i].dts.day,
-                &pOut->news[i].dts.hour,
-                &pOut->news[i].dts.minute,
-                &pOut->news[i].dts.second);
-        strncpy(pOut->news[i].src, (*p2++).c_str(), cNI_SOURCE_len);
-        pOut->news[i].src[cNI_SOURCE_len] = '\0';
-        strncpy(pOut->news[i].auth, (*p2++).c_str(), cNI_AUTHOR_len);
-        pOut->news[i].auth[cNI_AUTHOR_len] = '\0';
-        strncpy(pOut->news[i].headline, (*p2++).c_str(), cNI_HEADLINE_len);
-        pOut->news[i].headline[cNI_HEADLINE_len] = '\0';
-        strncpy(pOut->news[i].summary, (*p2++).c_str(), cNI_SUMMARY_len);
-        pOut->news[i].summary[cNI_SUMMARY_len] = '\0';
-        ++i;
-        v2.clear();
     }
-    check_count(pOut->news_len, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
-
-    sscanf(jsonArr->at(0)->get("open_date", "").asCString(), "%hd-%hd-%hd",
+    sscanf(jsonArr->at(0)->get("co_open_date", "").asCString(), "%hd-%hd-%hd",
             &pOut->open_date.year,
             &pOut->open_date.month,
             &pOut->open_date.day);
-    pOut->pe_ratio = jsonArr->at(0)->get("pe_ration", "").asFloat();
+    pOut->pe_ratio = jsonArr->at(0)->get("s_pe", "").asFloat();
     strncpy(pOut->s_name, jsonArr->at(0)->get("s_name", "").asCString(), cS_NAME_len);
     pOut->s_name[cS_NAME_len] = '\0';
-    pOut->num_out = jsonArr->at(0)->get("num_out", "").asInt64();
+    pOut->num_out = jsonArr->at(0)->get("s_num_out", "").asInt64();
     strncpy(pOut->sp_rate, jsonArr->at(0)->get("sp_rate", "").asCString(), cSP_RATE_len);
     pOut->sp_rate[cSP_RATE_len] = '\0';
-    sscanf(jsonArr->at(0)->get("start_date", "").asCString(), "%hd-%hd-%hd",
+    sscanf(jsonArr->at(0)->get("s_start_date", "").asCString(), "%hd-%hd-%hd",
             &pOut->start_date.year,
             &pOut->start_date.month,
             &pOut->start_date.day);
-    pOut->yield = jsonArr->at(0)->get("yield", "").asFloat();
+    pOut->yield = jsonArr->at(0)->get("s_yield", "").asFloat();
+
+    //TODO: free jsonArr
+    //TODO: free dmArr
+    //TODO: free ltArr
+    //TODO: free fiArr
+    //TODO: free newsArr
 }
 
 void TxnRestDB::execute( const TTradeCleanupFrame1Input *pIn ) {
