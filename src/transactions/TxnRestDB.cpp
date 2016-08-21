@@ -743,96 +743,62 @@ void TxnRestDB::execute( const TMarketFeedFrame1Input *pIn,
             //Send to market
             bSent = pMarketExchange->SendToMarketFromFrame( vec.at(j) );
         }
+        rows_sent += vec.size();
 
     }
-    for (unsigned int i = 0;
-            i < (sizeof(pIn->Entries) / sizeof(pIn->Entries[0])); ++i) {
-        if (i == 0) {
-            osSymbol << "\"" << pIn->Entries[i].symbol;
-            osPrice << pIn->Entries[i].price_quote;
-            osQty << pIn->Entries[i].trade_qty;
-        } else {
-            osSymbol << "\",\"" << pIn->Entries[i].symbol;
-            osPrice << "," << pIn->Entries[i].price_quote;
-            osQty << "," << pIn->Entries[i].trade_qty;
-        }
-    }
-    osSymbol << "\"";
-
-    ostringstream osSQL;
-    osSQL << "SELECT * FROM MarketFeedFrame1('{" <<
-        osPrice.str() << "}','" <<
-        pIn->StatusAndTradeType.status_submitted << "','{" <<
-        osSymbol.str() << "}', '{" <<
-        osQty.str() << "}','" <<
-        pIn->StatusAndTradeType.type_limit_buy << "','" <<
-        pIn->StatusAndTradeType.type_limit_sell << "','" <<
-        pIn->StatusAndTradeType.type_stop_loss << "')";
-
-    std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
-    pOut->num_updated = jsonArr->at(0)->get("num_updated", "").asInt();
-    pOut->send_len = jsonArr->at(0)->get("send_len", "").asInt();
-
-    vector<string> v1;
-    vector<string>::iterator p1;
-    vector<string> v2;
-    vector<string>::iterator p2;
-    vector<string> v3;
-    vector<string>::iterator p3;
-    vector<string> v4;
-    vector<string>::iterator p4;
-    vector<string> v5;
-    vector<string>::iterator p5;
-
-    TokenizeSmart(jsonArr->at(0)->get("symbol", "").asString(), v1);
-    TokenizeSmart(jsonArr->at(0)->get("trade_id", "").asString(), v2);
-    TokenizeSmart(jsonArr->at(0)->get("price_quote", "").asString(), v3);
-    TokenizeSmart(jsonArr->at(0)->get("trade_qty", "").asString(), v4);
-    TokenizeSmart(jsonArr->at(0)->get("trade_type", "").asString(), v5);
-
-    // FIXME: Consider altering to match spec.  Since PostgreSQL cannot
-    // control transaction from within a stored function and because we're
-    // making the call to the Market Exchange Emulator from outside
-    // the transaction, consider altering the code to call a stored
-    // function once per symbol to match the transaction rules in
-    // the spec.
-    int i = 0;
-    bool bSent;
-    for (p1 = v1.begin(), p2 = v2.begin(), p3 = v3.begin(), p4 = v4.begin(),
-            p5 = v5.begin(); p1 != v1.end(); ++p1, ++p2, ++p3, ++p4) {
-        strncpy(m_TriggeredLimitOrders.symbol, (*p1).c_str(), cSYMBOL_len);
-        m_TriggeredLimitOrders.symbol[cSYMBOL_len] = '\0';
-        m_TriggeredLimitOrders.trade_id = atol((*p2).c_str());
-        m_TriggeredLimitOrders.price_quote = atof((*p3).c_str());
-        m_TriggeredLimitOrders.trade_qty = atoi((*p4).c_str());
-        strncpy(m_TriggeredLimitOrders.trade_type_id, (*p5).c_str(),
-                cTT_ID_len);
-        m_TriggeredLimitOrders.trade_type_id[cTT_ID_len] = '\0';
-
-        bSent = pMarketExchange->SendToMarketFromFrame(
-                m_TriggeredLimitOrders);
-        ++i;
-    }
-    check_count(pOut->send_len, i, __FILE__, __LINE__);
+    pOut->send_len = rows_sent; //Is this right?
+    pOut->num_updated = rows_updated; //This is an upper bound, not the exact value
 }
 
 void TxnRestDB::execute( const TMarketWatchFrame1Input *pIn,
                          TMarketWatchFrame1Output *pOut ) {
     ostringstream osSQL;
-    osSQL << "SELECT * FROM MarketWatchFrame1(" <<
-        pIn->acct_id << "," <<
-        pIn->c_id << "," <<
-        pIn->ending_co_id << ",'" <<
-        pIn->industry_name << "','" <<
-        pIn->start_day.year << "-" <<
-        pIn->start_day.month << "-" <<
-        pIn->start_day.day << "'," <<
-        pIn->starting_co_id << ")";
+    if( pIn->c_id != 0 ) {
+        osSQL << "SELECT wi_s_symb as symb FROM watch_item, watch_list ";
+        osSQL << "WHERE wi_wl_id = wl_id AND wl_c_id = " << pIn->c_id;
+    } else if(  strlen(pIn->industry_name) > 0 ) { 
+        osSQL << "SELECT s_symb as symb FROM industry, company, security ";
+        osSQL << "WHERE in_name = '" << pIn->industry_name << "' AND ";
+        osSQL << "co_in_id = in_id AND co_id BETWEEN " << pIn->starting_co_id << " ";
+        osSQL << "AND " << pIn->ending_co_id << " AND s_co_id = co_id";
+    } else if( pIn->acct_id != 0 ) {
+        osSQL << "SELECT hs_s_symb FROM holding_summary WHERE hs_ca_id = ";
+        osSQL << pIn->acct_id;
+    }
+    std::vector<Json::Value *> *cursor = sendQuery( 1, osSQL.str().c_str() );
 
-    std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+    float old_mkt_cap = 0;
+    float new_mkt_cap = 0;
+    float pct_change = 0;
+    for( unsigned j = 0; j < cursor->size(); j++ ) {
+        osSQL.clear();
+        osSQL.str("");
+        osSQL << "SELECT lt_price FROM last_trade WHERE lt_s_symb = '";
+        osSQL << cursor->at(j)->get("symb", "").asString() << "'";
+        std::vector<Json::Value *> *lt_res = sendQuery( 1, osSQL.str().c_str() );
+        osSQL.clear();
+        osSQL.str("");
+        osSQL << "SELECT s_num_out FROM security WHERE s_symb = '";
+        osSQL << cursor->at(j)->get("symb","").asString() << "'";
+        std::vector<Json::Value *> *sec_res = sendQuery( 1, osSQL.str().c_str() );
+        osSQL.clear();
+        osSQL.str("");
+        //TODO: verify this is the right date format for mysql comparisons
+        osSQL << "SELECT dm_close FROM daily_market WHERE dm_s_symb ='";
+        osSQL << cursor->at(j)->get("symb", "").asString() << "' ";
+        osSQL << "AND dm_date = '" << pIn->start_day.year << "-";
+        osSQL << pIn->start_day.month << "-" << pIn->start_day.day << "'";
+        std::vector<Json::Value *> *dm_res = sendQuery( 1, osSQL.str().c_str() );
 
-    //TODO: Correct column name?
-    pOut->pct_change = jsonArr->at(0)->get("wi_s_symb","").asFloat();
+        old_mkt_cap += sec_res->at(0)->get("s_num_out","").asFloat() * dm_res->at(0)->get("dm_close", "").asFloat();
+        new_mkt_cap += sec_res->at(0)->get("s_num_out","").asFloat() * lt_res->at(0)->get("lt_price", "").asFloat();
+    }
+    if( old_mkt_cap != 0 ) {
+        pct_change = 100 * (new_mkt_cap/old_mkt_cap-1);
+    } else {
+        pct_change = 0;
+    }
+    pOut->pct_change = pct_change;
 
 }
 
