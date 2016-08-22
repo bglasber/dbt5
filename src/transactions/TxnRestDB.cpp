@@ -1012,372 +1012,224 @@ void TxnRestDB::execute( const TSecurityDetailFrame1Input *pIn,
 
 void TxnRestDB::execute( const TTradeCleanupFrame1Input *pIn ) {
     ostringstream osSQL;
-    osSQL << "SELECT * FROM TradeCleanupFrame1('" <<
-        pIn->st_canceled_id << "','" <<
-        pIn->st_pending_id << "','" <<
-        pIn->st_submitted_id << "'," <<
-        pIn->start_trade_id << ")";
+
+    osSQL << "SELECT tr_t_id FROM trade_request ";
+    osSQL << "ORDER BY tr_t_id";
 
     std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+    //All of these getdatetime()'s are the same in the spec,
+    //I'm not sure if it matters tho
+    for( unsigned i = 0; i < jsonArr->size(); i++ ) {
+        osSQL.clear();
+        osSQL.str("");
+        osSQL << "INSERT INTO trade_history ( th_t_id, th_dts, th_st_id ) VALUES ";
+        osSQL << "( " << jsonArr->at(i)->get("tr_t_id","").asInt64() << ", ";
+        osSQL << "getdatetime(), '" << pIn->st_submitted_id << "')";
+        std::vector<Json::Value *> *res = sendQuery( 1, osSQL.str().c_str() );
+        //TODO: free res
+
+        osSQL.clear();
+        osSQL.str("");
+        osSQL << "UPDATE trade SET t_st_id = '" << pIn->st_canceled_id << "', ";
+        osSQL << "t_dts = getdatetime() WHERE t_id = " << jsonArr->at(i)->get("tr_t_id","").asInt64();
+        res = sendQuery( 1, osSQL.str().c_str() );
+        //TODO: free res
+
+        osSQL.clear();
+        osSQL.str("");
+        osSQL << "INSERT INTO trade_history ( th_t_id, th_dts, th_st_id ) VALUES ";
+        osSQL << "( " << jsonArr->at(i)->get("tr_t_id", "").asInt64() << ", ";
+        osSQL << "getdatetime(), '" << pIn->st_canceled_id << "')";
+        res = sendQuery( 1, osSQL.str().c_str() );
+        //TODO: free res
+    }
+    //TODO: free jsonArr
+    osSQL.clear();
+    osSQL.str("");
+    osSQL << "DELETE FROM trade_history";
+    jsonArr = sendQuery( 1, osSQL.str().c_str() );
+    //TODO: free jsonArr
+
+    osSQL.clear();
+    osSQL.str("");
+    osSQL << "SELECT t_id FROM trade WHERE t_id >= " << pIn->start_trade_id;
+    osSQL << " AND t_st_id = '" << pIn->st_submitted_id << "'";
+    jsonArr = sendQuery( 1, osSQL.str().c_str() );
+
+    for( unsigned i = 0; i < jsonArr->size(); i++ ) {
+        osSQL.clear();
+        osSQL.str("");
+        osSQL << "UPDATE trade SET t_st_id = '" << pIn->st_canceled_id << "', ";
+        osSQL << "t_dts = getdatetime() WHERE t_id = " << jsonArr->at(i)->get("t_id", "").asInt64();
+        std::vector<Json::Value *> *res  = sendQuery( 1, osSQL.str().c_str() );
+        //TODO: free res
+
+        osSQL.clear();
+        osSQL.str("");
+        osSQL << "INSERT INTO trade_history ( th_t_id, th_dts, th_st_id ) VALUES ";
+        osSQL << "( " << jsonArr->at(i)->get("t_id", "").asInt64() << ", ";
+        osSQL << "getdatetime(), '" << pIn->st_canceled_id << "')";
+        res  = sendQuery( 1, osSQL.str().c_str() );
+        //TODO: free res
+    }
+    //TODO: Free jsonArr
+
 }
 
 void TxnRestDB::execute( const TTradeLookupFrame1Input *pIn,
                          TTradeLookupFrame1Output *pOut ) {
-    ostringstream osTrades;
-    int i = 0;
-    osTrades << pIn->trade_id[i];
-    for ( i = 1; i < pIn->max_trades; i++) {
-        osTrades << "," << pIn->trade_id[i];
-    }
+    long num_found = 0;
+    for( int i = 0; i < pIn->max_trades; i++ ) {
+        ostringstream osSQL;
+        osSQL << "SELECT t_bid_price, t_exec_name, t_is_cash, ";
+        osSQL << "t_is_mrkt, t_trade_price FROM trade, trade_type ";
+        osSQL << "WHERE t_id = " << pIn->trade_id[i] << " AND ";
+        osSQL << "t_tt_id = tt_id";
+        std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
 
-    ostringstream osSQL;
-    osSQL << "SELECT * FROM TradeLookupFrame1(" <<
-        pIn->max_trades << ",'{" <<
-        osTrades.str() << "}')";
+        pOut->trade_info[i].bid_price = jsonArr->at(0)->get("t_bid_price", "").asDouble();
+        strncpy( pOut->trade_info[i].exec_name, jsonArr->at(0)->get("t_exec_name", "").asCString(), cEX_NAME_len );
+        pOut->trade_info[i].is_cash = jsonArr->at(0)->get("t_is_cash", "").asBool();
+        pOut->trade_info[i].is_market = jsonArr->at(0)->get( "t_is_mrkt", "").asBool();
+        pOut->trade_info[i].trade_price = jsonArr->at(0)->get("t_trade_price", "").asDouble();
+        num_found += jsonArr->size();
 
-    std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+        osSQL.clear();
+        osSQL.str("");
 
-    pOut->num_found = jsonArr->at(0)->get("num_found", "").asInt();
+        osSQL << "SELECT se_amt, se_cash_due_date, se_cash_type ";
+        osSQL << "FROM settlement WHERE se_t_id = " << pIn->trade_id[i];
+        std::vector<Json::Value *> *seArr = sendQuery( 1, osSQL.str().c_str() );
 
-    vector<string> vAux;
-    vector<string>::iterator p;
+        osSQL.clear();
+        osSQL.str("");
+        if( pOut->trade_info[i].is_cash ) {
+            osSQL << "SELECT ct_amt, ct_dts, ct_name FROM cash_transaction ";
+            osSQL << "WHERE ct_t_id = " << pIn->trade_id[i];
+            std::vector<Json::Value *> *ctArr = sendQuery( 1, osSQL.str().c_str() );
+            pOut->trade_info[i].cash_transaction_amount = ctArr->at(0)->get("ct_amt", "").asDouble();
+            sscanf(ctArr->at(0)->get("ct_dts", "").asCString(), "%hd-%hd-%hd %hd:%hd:%hd",
+                    &pOut->trade_info[i].cash_transaction_dts.year,
+                    &pOut->trade_info[i].cash_transaction_dts.month,
+                    &pOut->trade_info[i].cash_transaction_dts.day,
+                    &pOut->trade_info[i].cash_transaction_dts.hour,
+                    &pOut->trade_info[i].cash_transaction_dts.minute,
+                    &pOut->trade_info[i].cash_transaction_dts.second);
+            strncpy(pOut->trade_info[i].cash_transaction_name, ctArr->at(0)->get("ct_name", "").asCString(), cCT_NAME_len);
+            pOut->trade_info[i].cash_transaction_name[cCT_NAME_len] = '\0';
 
-    TokenizeSmart(jsonArr->at(0)->get("bid_price", "").asCString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        pOut->trade_info[i].bid_price = atof((*p).c_str());
-        ++i;
-    }
-    check_count(pOut->num_found, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
-
-    TokenizeSmart(jsonArr->at(0)->get("cash_transaction_amount", "").asCString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        pOut->trade_info[i].cash_transaction_amount = atof((*p).c_str());
-        ++i;
-    }
-    vAux.clear();
-
-    TokenizeSmart(jsonArr->at(0)->get("cash_transaction_dts", "").asCString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        sscanf((*p).c_str(), "%hd-%hd-%hd %hd:%hd:%hd",
-                &pOut->trade_info[i].cash_transaction_dts.year,
-                &pOut->trade_info[i].cash_transaction_dts.month,
-                &pOut->trade_info[i].cash_transaction_dts.day,
-                &pOut->trade_info[i].cash_transaction_dts.hour,
-                &pOut->trade_info[i].cash_transaction_dts.minute,
-                &pOut->trade_info[i].cash_transaction_dts.second);
-        ++i;
-    }
-    vAux.clear();
-
-    TokenizeSmart(jsonArr->at(0)->get("cash_transaction_name", "").asCString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        strncpy(pOut->trade_info[i].cash_transaction_name, (*p).c_str(),
-                cCT_NAME_len);
-        pOut->trade_info[i].cash_transaction_name[cCT_NAME_len] = '\0';
-        ++i;
-    }
-    vAux.clear();
-
-    TokenizeSmart(jsonArr->at(0)->get("exec_name", "").asCString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        strncpy(pOut->trade_info[i].exec_name, (*p).c_str(), cEXEC_NAME_len);
-        pOut->trade_info[i].exec_name[cEXEC_NAME_len] = '\0';
-        ++i;
-    }
-    check_count(pOut->num_found, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
-
-    TokenizeSmart(jsonArr->at(0)->get("is_cash", "").asCString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        pOut->trade_info[i].is_cash = atoi((*p).c_str());
-        ++i;
-    }
-    check_count(pOut->num_found, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
-
-    TokenizeSmart(jsonArr->at(0)->get("is_market","").asCString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        pOut->trade_info[i].is_market = atoi((*p).c_str());
-        ++i;
-    }
-    check_count(pOut->num_found, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
-
-    TokenizeSmart(jsonArr->at(0)->get("settlement_amount", "").asCString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        pOut->trade_info[i].settlement_amount = atof((*p).c_str());
-        ++i;
-    }
-    check_count(pOut->num_found, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
-
-    TokenizeSmart(jsonArr->at(0)->get("settlement_cash_due_date","").asCString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        sscanf((*p).c_str(), "%hd-%hd-%hd %hd:%hd:%hd",
-                &pOut->trade_info[i].settlement_cash_due_date.year,
-                &pOut->trade_info[i].settlement_cash_due_date.month,
-                &pOut->trade_info[i].settlement_cash_due_date.day,
-                &pOut->trade_info[i].settlement_cash_due_date.hour,
-                &pOut->trade_info[i].settlement_cash_due_date.minute,
-                &pOut->trade_info[i].settlement_cash_due_date.second);
-        ++i;
-    }
-    if (!check_count(pOut->num_found, vAux.size(), __FILE__, __LINE__)) {
-        cout << "*** settlement_cash_due_date = " <<
-            jsonArr->at(0)->get("settlement_cash_due_date", "").asString() << endl;
-    }
-    vAux.clear();
-
-    TokenizeSmart(jsonArr->at(0)->get("settlement_cash_type","").asCString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        strncpy(pOut->trade_info[i].settlement_cash_type, (*p).c_str(),
-                cSE_CASH_TYPE_len);
-        pOut->trade_info[i].settlement_cash_type[cSE_CASH_TYPE_len] = '\0';
-        ++i;
-    }
-    check_count(pOut->num_found, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
-
-    TokenizeArray(jsonArr->at(0)->get("trade_history_dts","").asCString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        vector<string> v2;
-        vector<string>::iterator p2;
-        TokenizeSmart((*p).c_str(), v2);
-        int j = 0;
-        for (p2 = v2.begin(); p2 != v2.end(); ++p2) {
-            sscanf((*p2).c_str(), "%hd-%hd-%hd %hd:%hd:%hd",
-                    &pOut->trade_info[i].trade_history_dts[j].year,
-                    &pOut->trade_info[i].trade_history_dts[j].month,
-                    &pOut->trade_info[i].trade_history_dts[j].day,
-                    &pOut->trade_info[i].trade_history_dts[j].hour,
-                    &pOut->trade_info[i].trade_history_dts[j].minute,
-                    &pOut->trade_info[i].trade_history_dts[j].second);
-            ++j;
+            osSQL.clear();
+            osSQL.str("");
+            osSQL << "SELECT th_dts, th_st_id FROM trade_history ";
+            osSQL << "WHERE th_t_id = " << pIn->trade_id[i] << " ";
+            osSQL << "ORDER BY th_dts LIMIT 3";
+            std::vector<Json::Value *> *thArr = sendQuery( 1, osSQL.str().c_str() );
+            for( unsigned j = 0; j < thArr->size(); j++ ) {
+                sscanf(thArr->at(j)->get("th_dts","").asCString(), "%hd-%hd-%hd %hd:%hd:%hd",
+                        &pOut->trade_info[i].trade_history_dts[j].year,
+                        &pOut->trade_info[i].trade_history_dts[j].month,
+                        &pOut->trade_info[i].trade_history_dts[j].day,
+                        &pOut->trade_info[i].trade_history_dts[j].hour,
+                        &pOut->trade_info[i].trade_history_dts[j].minute,
+                        &pOut->trade_info[i].trade_history_dts[j].second);
+                strncpy(pOut->trade_info[i].trade_history_status_id[j],
+                        thArr->at(j)->get("th_st_id", "").asCString(), cTH_ST_ID_len);
+                pOut->trade_info[i].trade_history_status_id[j][cTH_ST_ID_len] =
+                    '\0';
+            }
         }
-        ++i;
     }
-    vAux.clear();
-
-    TokenizeArray(jsonArr->at(0)->get("trade_history_status_id", "").asCString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        vector<string> v2;
-        vector<string>::iterator p2;
-        TokenizeSmart((*p).c_str(), v2);
-        int j = 0;
-        for (p2 = v2.begin(); p2 != v2.end(); ++p2) {
-            strncpy(pOut->trade_info[i].trade_history_status_id[j],
-                    (*p2).c_str(), cTH_ST_ID_len);
-            pOut->trade_info[i].trade_history_status_id[j][cTH_ST_ID_len] =
-                '\0';
-            ++j;
-        }
-        ++i;
-    }
-    vAux.clear();
-
-    TokenizeSmart(jsonArr->at(0)->get("trade_price","").asCString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        pOut->trade_info[i].trade_price = atof((*p).c_str());
-        ++i;
-    }
-    check_count(pOut->num_found, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
 }
 
 void TxnRestDB::execute( const TTradeLookupFrame2Input *pIn,
                          TTradeLookupFrame2Output *pOut ) {
     ostringstream osSQL;
-    osSQL << "SELECT * FROM TradeLookupFrame2(" <<
-        pIn->acct_id << ",'" <<
-        pIn->end_trade_dts.year << "-" <<
-        pIn->end_trade_dts.month << "-" <<
-        pIn->end_trade_dts.day << " " <<
-        pIn->end_trade_dts.hour << ":" <<
-        pIn->end_trade_dts.minute << ":" <<
-        pIn->end_trade_dts.second << "'," <<
-        pIn->max_trades << ",'" <<
-        pIn->start_trade_dts.year << "-" <<
-        pIn->start_trade_dts.month << "-" <<
-        pIn->start_trade_dts.day << " " <<
-        pIn->start_trade_dts.hour << ":" <<
-        pIn->start_trade_dts.minute << ":" <<
-        pIn->start_trade_dts.second << "')";
+    osSQL << "SELECT t_bid_price, t_exec_name, t_is_cash, ";
+    osSQL << "t_id, t_trade_price FROM trade WHERE ";
+    osSQL << "t_ca_id = " << pIn->acct_id << " AND ";
+    osSQL << "t_dts >= '" << pIn->start_trade_dts.year << "-";
+    osSQL << pIn->start_trade_dts.month << "-" << pIn->start_trade_dts.day;
+    osSQL << " " << pIn->start_trade_dts.hour << ":" << pIn->start_trade_dts.minute;
+    osSQL << ":" << pIn->start_trade_dts.second << "' AND ";
+    osSQL << "t_dts <= '" << pIn->end_trade_dts.year << "-";
+    osSQL << pIn->end_trade_dts.month << "-" << pIn->end_trade_dts.day;
+    osSQL << " " << pIn->end_trade_dts.hour << ":" << pIn->end_trade_dts.minute;
+    osSQL << ":" << pIn->end_trade_dts.second << "' ORDER BY t_dts ASC ";
+    osSQL << "LIMIT " << pIn->max_trades;
 
     std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
-
-    pOut->num_found = jsonArr->at(0)->get("num_found","").asInt();
-
-    vector<string> vAux;
-    vector<string>::iterator p;
-
-    TokenizeSmart(jsonArr->at(0)->get("bid_price", "").asCString(), vAux);
-    int i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        pOut->trade_info[i].bid_price = atof((*p).c_str());
-        ++i;
-    }
-    check_count(pOut->num_found, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
-
-    TokenizeSmart(jsonArr->at(0)->get("cash_transaction_amount", "").asCString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        pOut->trade_info[i].cash_transaction_amount = atof((*p).c_str());
-        ++i;
-    }
-    // FIXME: According to spec, this may not match the returned number found?
-    vAux.clear();
-
-    TokenizeSmart(jsonArr->at(0)->get("cash_transaction_dts", "").asCString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        sscanf((*p).c_str(), "%hd-%hd-%hd %hd:%hd:%hd",
-                &pOut->trade_info[i].cash_transaction_dts.year,
-                &pOut->trade_info[i].cash_transaction_dts.month,
-                &pOut->trade_info[i].cash_transaction_dts.day,
-                &pOut->trade_info[i].cash_transaction_dts.hour,
-                &pOut->trade_info[i].cash_transaction_dts.minute,
-                &pOut->trade_info[i].cash_transaction_dts.second);
-        ++i;
-    }
-    // FIXME: According to spec, this may not match the returned number found?
-    vAux.clear();
-
-    TokenizeSmart(jsonArr->at(0)->get("cash_transaction_name", "").asCString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        strncpy(pOut->trade_info[i].cash_transaction_name, (*p).c_str(),
-                cCT_NAME_len);
-        pOut->trade_info[i].cash_transaction_name[cCT_NAME_len] = '\0';
-        ++i;
-    }
-    // FIXME: According to spec, this may not match the returned number found?
-    vAux.clear();
-
-    TokenizeSmart(jsonArr->at(0)->get("exec_name", "").asCString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        strncpy(pOut->trade_info[i].exec_name, (*p).c_str(), cEXEC_NAME_len);
+    for( unsigned i = 0; i < jsonArr->size(); i++ ) {
+        pOut->trade_info[i].bid_price = jsonArr->at(i)->get("t_bid_price", "").asDouble();
+        strncpy( pOut->trade_info[i].exec_name, jsonArr->at(i)->get("t_exec_name", "").asCString(), cEXEC_NAME_len );
         pOut->trade_info[i].exec_name[cEXEC_NAME_len] = '\0';
-        ++i;
+        pOut->trade_info[i].is_cash = jsonArr->at(i)->get("t_is_cash", "").asBool();
+        pOut->trade_info[i].trade_id = jsonArr->at(i)->get("t_id", "").asInt64();
+        pOut->trade_info[i].trade_price = jsonArr->at(i)->get("t_trade_price", "").asDouble();
     }
-    check_count(pOut->num_found, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
 
-    TokenizeSmart(jsonArr->at(0)->get("is_cash", "").asCString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        pOut->trade_info[i].is_cash = atoi((*p).c_str());
-        ++i;
-    }
-    check_count(pOut->num_found, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
+    long num_found = jsonArr->size();
+    for( unsigned i = 0; i < jsonArr->size(); i++ ) {
+        osSQL.clear();
+        osSQL.str("");
+        osSQL << "SELECT se_amt, se_cash_due_date, se_cash_type ";
+        osSQL << "FROM settlement WHERE se_t_id = ";
+        osSQL << jsonArr->at(i)->get("t_id", "").asInt64();
+        std::vector<Json::Value *> *res = sendQuery( 1, osSQL.str().c_str() );
 
-    TokenizeSmart(jsonArr->at(0)->get("settlement_amount", "").asCString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        pOut->trade_info[i].settlement_amount = atof((*p).c_str());
-        ++i;
-    }
-    check_count(pOut->num_found, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
-
-    TokenizeSmart(jsonArr->at(0)->get("settlement_cash_due_date", "").asCString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        sscanf((*p).c_str(), "%hd-%hd-%hd %hd:%hd:%hd",
+        pOut->trade_info[i].settlement_amount = res->at(0)->get("se_amt", "").asDouble();
+        sscanf(res->at(0)->get("se_cash_due_date", "").asCString(), "%hd-%hd-%hd %hd:%hd:%hd",
                 &pOut->trade_info[i].settlement_cash_due_date.year,
                 &pOut->trade_info[i].settlement_cash_due_date.month,
                 &pOut->trade_info[i].settlement_cash_due_date.day,
                 &pOut->trade_info[i].settlement_cash_due_date.hour,
                 &pOut->trade_info[i].settlement_cash_due_date.minute,
                 &pOut->trade_info[i].settlement_cash_due_date.second);
-        ++i;
-    }
-    check_count(pOut->num_found, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
-
-    TokenizeSmart(jsonArr->at(0)->get("settlement_cash_type", "").asCString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        strncpy(pOut->trade_info[i].settlement_cash_type, (*p).c_str(),
+        strncpy(pOut->trade_info[i].settlement_cash_type,
+                res->at(0)->get("se_cash_type", "").asCString(),
                 cSE_CASH_TYPE_len);
         pOut->trade_info[i].settlement_cash_type[cSE_CASH_TYPE_len] = '\0';
-        ++i;
-    }
-    check_count(pOut->num_found, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
 
-    TokenizeArray(jsonArr->at(0)->get("trade_history_dts", "").asCString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        vector<string> v2;
-        vector<string>::iterator p2;
-        TokenizeSmart((*p).c_str(), v2);
-        int j = 0;
-        for (p2 = v2.begin(); p2 != v2.end(); ++p2) {
-            sscanf((*p2).c_str(), "%hd-%hd-%hd %hd:%hd:%hd",
-                    &pOut->trade_info[i].trade_history_dts[j].year,
-                    &pOut->trade_info[i].trade_history_dts[j].month,
-                    &pOut->trade_info[i].trade_history_dts[j].day,
-                    &pOut->trade_info[i].trade_history_dts[j].hour,
-                    &pOut->trade_info[i].trade_history_dts[j].minute,
-                    &pOut->trade_info[i].trade_history_dts[j].second);
-            ++j;
+        if( pOut->trade_info[i].is_cash ) {
+            osSQL.clear();
+            osSQL.str("");
+            osSQL << "SELECT ct_amt, ct_dts, ct_name FROM cash_transaction ";
+            osSQL << "WHERE ct_t_id = " << jsonArr->at(i)->get("t_id", "").asInt64();
+            std::vector<Json::Value *> *ctArr = sendQuery(1, osSQL.str().c_str() );
+            pOut->trade_info[i].cash_transaction_amount = ctArr->at(0)->get("ct_amt", "").asDouble();
+            sscanf(ctArr->at(0)->get("ct_dts", "").asCString(), "%hd-%hd-%hd %hd:%hd:%hd",
+                &pOut->trade_info[i].cash_transaction_dts.year,
+                &pOut->trade_info[i].cash_transaction_dts.month,
+                &pOut->trade_info[i].cash_transaction_dts.day,
+                &pOut->trade_info[i].cash_transaction_dts.hour,
+                &pOut->trade_info[i].cash_transaction_dts.minute,
+                &pOut->trade_info[i].cash_transaction_dts.second);
+            strncpy(pOut->trade_info[i].cash_transaction_name,
+                    ctArr->at(0)->get("ct_name","").asCString(),
+                cCT_NAME_len);
+            pOut->trade_info[i].cash_transaction_name[cCT_NAME_len] = '\0';
+
         }
-        ++i;
-    }
-    vAux.clear();
+        osSQL.clear();
+        osSQL.str("");
+        osSQL << "SELECT th_dts th_st_id FROM trade_history WHERE ";
+        osSQL << "th_t_id = " << jsonArr->at(0)->get("t_id", "").asInt64();
+        osSQL << " ORDER BY th_dts LIMIT 3";
+        std::vector<Json::Value *> *thArr = sendQuery( 1, osSQL.str().c_str() );
+        for( unsigned j = 0; j < thArr->size(); j++ ) {
+            sscanf(thArr->at(j)->get("th_dts", "").asCString(), "%hd-%hd-%hd %hd:%hd:%hd",
+              &pOut->trade_info[i].trade_history_dts[j].year,
+              &pOut->trade_info[i].trade_history_dts[j].month,
+              &pOut->trade_info[i].trade_history_dts[j].day,
+              &pOut->trade_info[i].trade_history_dts[j].hour,
+              &pOut->trade_info[i].trade_history_dts[j].minute,
+              &pOut->trade_info[i].trade_history_dts[j].second);
+            strncpy( pOut->trade_info[i].trade_history_status_id[j],
+                     thArr->at(j)->get("th_st_id", "").asCString(), cTH_ST_ID_len);
+            pOut->trade_info[i].trade_history_status_id[j][cTH_ST_ID_len] = '\0';
 
-    TokenizeArray(jsonArr->at(0)->get("trade_history_status_id", "").asCString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        vector<string> v2;
-        vector<string>::iterator p2;
-        TokenizeSmart((*p).c_str(), v2);
-        int j = 0;
-        for (p2 = v2.begin(); p2 != v2.end(); ++p2) {
-            strncpy(pOut->trade_info[i].trade_history_status_id[j],
-                    (*p2).c_str(), cTH_ST_ID_len);
-            pOut->trade_info[i].trade_history_status_id[j][cTH_ST_ID_len] =
-                '\0';
-            ++j;
         }
-        ++i;
-    }
-    vAux.clear();
 
-    TokenizeSmart(jsonArr->at(0)->get("trade_list", "").asCString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        pOut->trade_info[i].trade_id = atol((*p).c_str());
-        ++i;
     }
-    check_count(pOut->num_found, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
-
-    TokenizeSmart(jsonArr->at(0)->get("trade_price", "").asCString(), vAux);
-    i = 0;
-    for (p = vAux.begin(); p != vAux.end(); ++p) {
-        pOut->trade_info[i].trade_price = atof((*p).c_str());
-        ++i;
-    }
-    check_count(pOut->num_found, vAux.size(), __FILE__, __LINE__);
-    vAux.clear();
 }
 
 void TxnRestDB::execute( const TTradeLookupFrame3Input *pIn,
