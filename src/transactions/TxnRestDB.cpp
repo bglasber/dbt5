@@ -1270,7 +1270,7 @@ void TxnRestDB::execute( const TTradeLookupFrame3Input *pIn,
      
     pOut->num_found = jsonArr->size();
 
-    for( unsigned i = 0; i < pOut->num_found; i++ ) {
+    for( int i = 0; i < pOut->num_found; i++ ) {
         osSQL << "SELECT se_amt, se_cash_due_date, se_cash_type FROM settlement ";   
         osSQL << "WHERE se_t_id = " << jsonArr->at(i)->get("t_id", "").asInt64();
         std::vector<Json::Value *> *seArr = sendQuery( 1, osSQL.str().c_str() );
@@ -1365,43 +1365,53 @@ void TxnRestDB::execute( const TTradeLookupFrame4Input *pIn,
 void TxnRestDB::execute( const TTradeOrderFrame1Input *pIn,
                          TTradeOrderFrame1Output *pOut ) {
     ostringstream osSQL;
-    osSQL << "SELECT * FROM TradeOrderFrame1(" << pIn->acct_id << ")";
+    osSQL << "SELECT ca_name, ca_b_id, ca_c_id, ca_tax_st FROM ";
+    osSQL << "customer_account WHERE ca_id = " << pIn->acct_id;
 
     std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
-
-    strncpy(pOut->acct_name, jsonArr->at(0)->get("acct_name", "").asCString(), cCA_NAME_len);
+    pOut->num_found = jsonArr->size();
+    strncpy(pOut->acct_name, jsonArr->at(0)->get("ca_name", "").asCString(), cCA_NAME_len);
     pOut->acct_name[cCA_NAME_len] ='\0';
-    pOut->broker_id = jsonArr->at(0)->get("broker_id", "").asInt64();
-    strncpy(pOut->broker_name, jsonArr->at(0)->get("broker_name", "").asCString(), cB_NAME_len);
-    pOut->broker_name[cB_NAME_len]  ='\0';
-    strncpy(pOut->cust_f_name, jsonArr->at(0)->get("cust_f_name", "").asCString(), cF_NAME_len);
+    pOut->broker_id = jsonArr->at(0)->get("ca_b_id", "").asInt64();
+    pOut->cust_id = jsonArr->at(0)->get("ca_c_id", "").asInt64();
+    pOut->tax_status = jsonArr->at(0)->get("ca_tax_st", "").asInt();
+
+    osSQL.clear();
+    osSQL.str("");
+
+    osSQL << "SELECT c_f_name, c_l_name, cust_tier, tax_id FROM ";
+    osSQL << "customer WHERE c_id = " << jsonArr->at(0)->get("ca_c_id", "").asInt64();
+    std::vector<Json::Value *> *cArr = sendQuery( 1, osSQL.str().c_str() );
+    strncpy(pOut->cust_f_name, cArr->at(0)->get("c_f_name", "").asCString(), cF_NAME_len);
     pOut->cust_f_name[cF_NAME_len] = '\0';
-    pOut->cust_id = jsonArr->at(0)->get("cust_id", "").asInt64();
-    strncpy(pOut->cust_l_name, jsonArr->at(0)->get("cust_l_name", "").asCString(), cL_NAME_len);
+    strncpy(pOut->cust_l_name, cArr->at(0)->get("c_l_name", "").asCString(), cL_NAME_len);
     pOut->cust_l_name[cL_NAME_len] = '\0';
-    pOut->cust_tier = jsonArr->at(0)->get("cust_tier", "").asInt64();
-    pOut->num_found = jsonArr->at(0)->get("num_found", "").asInt();
-    strncpy(pOut->tax_id, jsonArr->at(0)->get("tax_id", "").asCString(), cTAX_ID_len);
+    pOut->cust_tier = cArr->at(0)->get("cust_tier", "").asInt64();
+    strncpy(pOut->tax_id, cArr->at(0)->get("tax_id", "").asCString(), cTAX_ID_len);
     pOut->tax_id[cTAX_ID_len] = '\0';
-    pOut->tax_status = jsonArr->at(0)->get("tax_id", "").asInt();
+
+    osSQL.clear();
+    osSQL.str("");
+
+    osSQL << "SELECT b_name FROM broker WHERE b_id = " << jsonArr->at(0)->get("ca_b_id", "").asInt64();
+    std::vector<Json::Value *> *bArr = sendQuery( 1, osSQL.str().c_str() );
+    strncpy(pOut->broker_name, bArr->at(0)->get("b_name", "").asCString(), cB_NAME_len);
+    pOut->broker_name[cB_NAME_len]  ='\0';
 }
 
 void TxnRestDB::execute( const TTradeOrderFrame2Input *pIn,
                          TTradeOrderFrame2Output *pOut ) {
     ostringstream osSQL;
     char *tmpstr;
-    osSQL << "SELECT * FROM TradeOrderFrame2(" <<
-        pIn->acct_id << ",";
-    //
     tmpstr = escape(pIn->exec_f_name);
-    osSQL << tmpstr;
-    free( tmpstr );
-    osSQL << ",";
-    tmpstr = escape(pIn->exec_l_name);
-    osSQL << tmpstr;
-    free( tmpstr );
-    osSQL << ",'" << pIn->exec_tax_id<<"')";
 
+    osSQL << "SELECT ap_acl FROM account_permission WHERE ";
+    osSQL << "ap_ca_id = " << pIn->acct_id << " AND ap_f_name = '";
+    osSQL << tmpstr << "' AND ap_l_name = '";
+    free( tmpstr );
+    tmpstr = escape(pIn->exec_l_name);
+    osSQL << tmpstr << "' AND ap_tax_id = '" << pIn->exec_l_name << "'";
+    free( tmpstr );
     std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
 
     //0,0 should be i_bid_price
