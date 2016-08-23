@@ -1268,9 +1268,9 @@ void TxnRestDB::execute( const TTradeLookupFrame3Input *pIn,
     osSQL.clear();
     osSQL.str("");
      
-    long num_found = jsonArr->size();
+    pOut->num_found = jsonArr->size();
 
-    for( unsigned i = 0; i < num_found; i++ ) {
+    for( unsigned i = 0; i < pOut->num_found; i++ ) {
         osSQL << "SELECT se_amt, se_cash_due_date, se_cash_type FROM settlement ";   
         osSQL << "WHERE se_t_id = " << jsonArr->at(i)->get("t_id", "").asInt64();
         std::vector<Json::Value *> *seArr = sendQuery( 1, osSQL.str().c_str() );
@@ -1333,60 +1333,33 @@ void TxnRestDB::execute( const TTradeLookupFrame4Input *pIn,
                          TTradeLookupFrame4Output *pOut ) {
 
     ostringstream osSQL;
-    osSQL << "SELECT * FROM TradeLookupFrame4(" <<
-        pIn->acct_id << ",'" <<
-        pIn->trade_dts.year << "-" <<
-        pIn->trade_dts.month << "-" <<
-        pIn->trade_dts.day << " " <<
-        pIn->trade_dts.hour << ":" <<
-        pIn->trade_dts.minute << ":" <<
-        pIn->trade_dts.second << "')";
 
-        std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+    osSQL << "SELECT t_id FROM trade WHERE t_ca_id  = ";
+    osSQL << pIn->acct_id << " AND t_dts >= '";
+    osSQL << pIn->trade_dts.year << "-" << pIn->trade_dts.month << "-";
+    osSQL << pIn->trade_dts.day << " " << pIn->trade_dts.hour << ":";
+    osSQL << ":" << pIn->trade_dts.minute << ":" << pIn->trade_dts.second << "' ";
+    osSQL << "ORDER BY t_dts ASC LIMIT 1";
+    std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+    pOut->num_trades_found = jsonArr->size();
+    pOut->trade_id = jsonArr->at(0)->get("t_id", "").asInt64();
 
-        pOut->num_found = jsonArr->at(0)->get("num_found", "").asInt();
-        pOut->num_trades_found = jsonArr->at(0)->get("num_trades_found", "").asInt();
+    osSQL.clear();
+    osSQL.str("");
+    osSQL << "SELECT hh_h_t_id, hh_t_id, hh_before_qty, hh_after_qty ";
+    osSQL << "FROM holding_history WHERE hh_h_t_id IN ( SELECT hh_h_t_id ";
+    osSQL << "FROM holding_history WHERE hh_t_id = " << pOut->trade_id;
+    osSQL << ") LIMIT 20";
+    std::vector<Json::Value *> *hhArr = sendQuery( 1, osSQL.str().c_str() );
+    pOut->num_found = hhArr->size();
 
-        vector<string> vAux;
-        vector<string>::iterator p;
+    for( unsigned i = 0; i < hhArr->size(); i++ ) {
+        pOut->trade_info[i].holding_history_id = hhArr->at(i)->get("hh_h_t_id", "").asInt64();
+        pOut->trade_info[i].holding_history_trade_id = hhArr->at(i)->get("hh_t_id", "").asInt64();
+        pOut->trade_info[i].quantity_before = hhArr->at(i)->get("hh_before_qty", "").asDouble();
+        pOut->trade_info[i].quantity_after = hhArr->at(i)->get("hh_before_qty", "").asDouble();
+    }
 
-        TokenizeSmart(jsonArr->at(0)->get("holding_history_id", "").asCString(), vAux);
-        int i = 0;
-        for (p = vAux.begin(); p != vAux.end(); ++p) {
-            pOut->trade_info[i].holding_history_id = atol((*p).c_str());
-            ++i;
-        }
-        check_count(pOut->num_found, vAux.size(), __FILE__, __LINE__);
-        vAux.clear();
-
-        TokenizeSmart(jsonArr->at(0)->get("holding_history_trade_id", "").asCString(), vAux);
-        i = 0;
-        for (p = vAux.begin(); p != vAux.end(); ++p) {
-            pOut->trade_info[i].holding_history_trade_id = atol((*p).c_str());
-            ++i;
-        }
-        check_count(pOut->num_found, vAux.size(), __FILE__, __LINE__);
-        vAux.clear();
-
-        TokenizeSmart(jsonArr->at(0)->get("quantity_after", "").asCString(), vAux);
-        i = 0;
-        for (p = vAux.begin(); p != vAux.end(); ++p) {
-            pOut->trade_info[i].quantity_after = atol((*p).c_str());
-            ++i;
-        }
-        check_count(pOut->num_found, vAux.size(), __FILE__, __LINE__);
-        vAux.clear();
-
-        TokenizeSmart(jsonArr->at(0)->get("quantity_before", "").asCString(), vAux);
-        i = 0;
-        for (p = vAux.begin(); p != vAux.end(); ++p) {
-            pOut->trade_info[i].quantity_before = atol((*p).c_str());
-            ++i;
-        }
-        check_count(pOut->num_found, vAux.size(), __FILE__, __LINE__);
-        vAux.clear();
-
-        pOut->trade_id = jsonArr->at(0)->get("trade_id", "").asInt64();
 }
 
 void TxnRestDB::execute( const TTradeOrderFrame1Input *pIn,
