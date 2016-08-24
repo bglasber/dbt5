@@ -1428,71 +1428,216 @@ void TxnRestDB::execute( const TTradeOrderFrame3Input *pIn,
                          TTradeOrderFrame3Output *pOut ) {
     ostringstream osSQL;
     char *tmpstr;
-    osSQL << "SELECT * FROM TradeOrderFrame3(" <<
-        pIn->acct_id << "," <<
-        pIn->cust_id << "," <<
-        pIn->cust_tier << "::SMALLINT," <<
-        pIn->is_lifo << "::SMALLINT,'" <<
-        pIn->issue << "','" <<
-        pIn->st_pending_id << "','" <<
-        pIn->st_submitted_id << "'," <<
-        pIn->tax_status << "::SMALLINT," <<
-        pIn->trade_qty << ",'" <<
-        pIn->trade_type_id << "'," <<
-        pIn->type_is_margin << "::SMALLINT,";
-    tmpstr = escape(pIn->co_name);
-    osSQL << tmpstr;
-    free(tmpstr);
-    osSQL << "," <<
-        pIn->requested_price << ",'" <<
-        pIn->symbol << "')";
+    char ex_id[10];
+    long co_id;
+    if( strlen(pIn->symbol) == 0 ) {
+        osSQL << "SELECT co_id FROM company WHERE co_name = '";
+        osSQL << tmpstr << "'";
+        free(tmpstr);
+        std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+        co_id = jsonArr->at(0)->get("co_id", "").asInt64();
 
-    std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+        osSQL.clear();
+        osSQL.str("");
+        osSQL << "SELECT s_ex_id, s_name, s_symb FROM security ";
+        osSQL << "WHERE s_co_id = " << co_id << " AND ";
+        osSQL << "s_issue = '" << pIn->issue << "'";
+        std::vector<Json::Value *> *sArr = sendQuery( 1, osSQL.str().c_str() );
+        strncpy( ex_id, sArr->at(0)->get("s_ex_id", "").asCString(), cEX_ID_len );
+        ex_id[cEX_ID_len] = '\0';
+        strncpy( pOut->s_name, sArr->at(0)->get("s_name", "").asCString(), cS_NAME_len );
+        pOut->s_name[cS_NAME_len] = '\0';
+        strncpy( pOut->symbol, sArr->at(0)->get("s_symb", "").asCString(), cSYMBOL_len );
+        pOut->symbol[cSYMBOL_len] = '\0';
+    } else {
+        osSQL << "SELECT s_co_id, s_ex_id, s_name FROM security WHERE ";
+        osSQL << "s_symb = '" << pIn->symbol << "'";
+        std::vector<Json::Value *> *sArr = sendQuery( 1, osSQL.str().c_str() );
+        co_id = sArr->at(0)->get("s_co_id", "").asInt64();
+        strncpy( ex_id, sArr->at(0)->get("s_ex_id", "").asCString(), cEX_ID_len );
+        ex_id[cEX_ID_len] = '\0';
+        strncpy( pOut->s_name, sArr->at(0)->get("s_name", "").asCString(), cS_NAME_len );
+        pOut->s_name[cS_NAME_len] = '\0';
+        strncpy( pOut->symbol, pIn->symbol, cSYMBOL_len );
+        pOut->symbol[cSYMBOL_len] = '\0';
 
-    strncpy(pOut->co_name, jsonArr->at(0)->get("co_name", "").asCString(), cCO_NAME_len);
-    pOut->requested_price = jsonArr->at(0)->get("requested_price", "").asFloat();
-    strncpy(pOut->symbol, jsonArr->at(0)->get("symbol", "").asCString(), cSYMBOL_len);
-    pOut->symbol[cSYMBOL_len] = '\0';
-    pOut->buy_value = jsonArr->at(0)->get("buy_value", "").asFloat();
-    pOut->charge_amount = jsonArr->at(0)->get("charge_amount", "").asFloat();
-    pOut->comm_rate = jsonArr->at(0)->get("comm_rate", "").asFloat();
-    pOut->acct_assets = jsonArr->at(0)->get("cust_assets", "").asFloat();
-    pOut->market_price = jsonArr->at(0)->get("market_price", "").asFloat();
-    strncpy(pOut->s_name, jsonArr->at(0)->get("s_name", "").asCString(), cS_NAME_len);
-    pOut->s_name[cS_NAME_len] = '\0';
-    pOut->sell_value = jsonArr->at(0)->get("sell_value", "").asFloat();
-    strncpy(pOut->status_id, jsonArr->at(0)->get("status_id", "").asCString(), cTH_ST_ID_len);
-    pOut->status_id[cTH_ST_ID_len] = '\0';
-    pOut->tax_amount = jsonArr->at(0)->get("tax_amount","").asFloat();
-    pOut->type_is_market = (jsonArr->at(0)->get("type_is_market", "").asCString()[0] == 't' ? 1 : 0);
-    pOut->type_is_sell = (jsonArr->at(0)->get("type_is_sell", "").asCString()[0] == 't' ? 1 : 0);
+        osSQL.clear();
+        osSQL.str("");
+        osSQL << "SELECT co_name FROM company WHERE co_id = ";
+        osSQL << co_id;
+        std::vector<Json::Value *> *coArr = sendQuery( 1, osSQL.str().c_str() );
+        strncpy( pOut->co_name, coArr->at(0)->get("co_name", "").asCString(), cCO_NAME_len );
+        pOut->co_name[cCO_NAME_len] = '\0';
+    }
+
+    osSQL.clear();
+    osSQL.str("");
+    osSQL << "SELECT lt_price FROM last_trade WHERE lt_s_symb = '";
+    osSQL << pOut->symbol << "'";
+    std::vector<Json::Value *> *ltArr = sendQuery( 1, osSQL.str().c_str() );
+    pOut->market_price = ltArr->at(0)->get("lt_price", "").asDouble();
+
+    osSQL.clear();
+    osSQL.str("");
+    osSQL << "SELECT tt_is_mrkt, tt_is_sell FROM trade_type ";
+    osSQL << "WHERE tt_id = '" << pIn->trade_type_id << "'";
+    std::vector<Json::Value *> *ttArr = sendQuery( 1, osSQL.str().c_str() );
+    pOut->type_is_market = ttArr->at(0)->get("tt_is_mrkt", "").asBool();
+    pOut->type_is_sell = ttArr->at(0)->get("tt_is_sell", "").asBool();
+
+    if( pOut->type_is_market ) {
+        pOut->requested_price = pOut->market_price;
+    }
+
+    pOut->buy_value = 0;
+    pOut->sell_value = 0;
+    long needed_qty = pIn->trade_qty;
+    long hs_qty = 0;
+
+    osSQL.clear();
+    osSQL.str("");
+    osSQL << "SELECT hs_qty FROM holding_summary WHERE ";
+    osSQL << "hs_ca_id = " << pIn->acct_id << " AND hs_s_symb = '";
+    osSQL << pOut->symbol << "'";
+    std::vector<Json::Value *> *hsArr = sendQuery( 1, osSQL.str().c_str() );
+    if( hsArr->size() > 0 ) {
+        hs_qty = hsArr->at(0)->get("hs_qty", "").asInt64();
+    }
+    if( pOut->type_is_sell ) {
+        if( hs_qty > 0 ) {
+            std::vector<Json::Value *> *hold_list;
+            if( pIn->is_lifo ) {
+                osSQL.clear();
+                osSQL.str("");
+                osSQL << "SELECT h_qty, h_price FROM holding WHERE ";
+                osSQL << "h_ca_id = " << pIn->acct_id << " AND h_s_symb = '";
+                osSQL << pOut->symbol << "' ORDER BY h_dts DESC";
+                hold_list = sendQuery( 1, osSQL.str().c_str() );
+            } else {
+                osSQL.clear();
+                osSQL.str("");
+                osSQL << "SELECT h_qty, h_price FROM holding WHERE ";
+                osSQL << "h_ca_id = " << pIn->acct_id << " AND h_s_symb = '";
+                osSQL << pOut->symbol << "' ORDER BY h_dts ASC";
+                hold_list = sendQuery( 1, osSQL.str().c_str() );
+            }
+            for( unsigned i = 0; i < hold_list->size(); i++ ) {
+                if( needed_qty == 0 ) {
+                    break;
+                }
+                long hold_qty = hold_list->at(i)->get("h_qty", "").asInt64();
+                long hold_price = hold_list->at(i)->get("h_price", "").asDouble();
+                if( hold_qty > needed_qty ) {
+                    pOut->buy_value += needed_qty * hold_price;
+                    pOut->sell_value += needed_qty * pOut->requested_price;
+                    needed_qty = 0;
+                } else {
+                    pOut->buy_value += hold_qty * hold_price;
+                    pOut->sell_value += hold_qty * pOut->requested_price;
+                    needed_qty = needed_qty - hold_qty;
+                }
+            }
+        }
+        pOut->tax_amount = 0;
+        if( (pOut->sell_value > pOut->buy_value) &&
+                ( (pIn->tax_status == 1) || (pIn->tax_status == 2 ) ) ) {
+            osSQL.clear();
+            osSQL.str("");
+            osSQL << "SELECT sum(tx_rate) as tx FROM taxrate WHERE tx_id in ( ";
+            osSQL << "SELECT cx_tx_id FROM customer_taxrate WHERE cx_c_id = ";
+            osSQL << pIn->cust_id << ")";
+            std::vector<Json::Value *> *tArr = sendQuery( 1, osSQL.str().c_str() );
+            pOut->tax_amount = (pOut->sell_value - pOut->buy_value) * tArr->at(0)->get("tx", "").asDouble();
+        }
+
+        osSQL.clear();
+        osSQL.str("");
+        osSQL << "SELECT cr_rate FROM commission_rate WHERE cr_c_tier = ";
+        osSQL << pIn->cust_tier << " AND cr_tt_id = '" << pIn->trade_type_id;
+        osSQL << "' AND cr_ex_id = '" << ex_id << "' AND cr_from_qty <= ";
+        osSQL << pIn->trade_qty << "cr_to_qty >= " << pIn->trade_qty;
+        std::vector<Json::Value *> *crArr = sendQuery( 1, osSQL.str().c_str() );
+        pOut->comm_rate = crArr->at(0)->get("cr_rate", "").asDouble();
+
+        osSQL.clear();
+        osSQL.str("");
+        osSQL << "SELECT ch_chrg FROM charge WHERE ch_c_tier = " << pIn->cust_tier << " ";
+        osSQL << "AND ch_tt_id = '" << pIn->trade_type_id << "'";
+        std::vector<Json::Value *> *chArr = sendQuery( 1, osSQL.str().c_str() );
+        pOut->charge_amount = chArr->at(0)->get("ch_chrg", "").asDouble();
+
+        if( pIn->type_is_margin ) {
+            osSQL.clear();
+            osSQL.str("");
+            osSQL << "SELECT ca_bal FROM customer_account WHERE ca_id = " << pIn->acct_id;
+            std::vector<Json::Value *> *caArr = sendQuery( 1, osSQL.str().c_str() );
+
+            osSQL.clear();
+            osSQL.str("");
+            osSQL << "SELECT sum(hs_qty * lt_price) as hold_assets FROM holding_summary, last_trade ";
+            osSQL << "WHERE hs_ca_id = " << pIn->acct_id << " AND lt_s_symb = hs_s_symb";
+            std::vector<Json::Value *> *hltArr = sendQuery( 1, osSQL.str().c_str() );
+
+            if( hltArr->size() > 0 ) {
+                pOut->acct_assets = hltArr->at(0)->get("hold_assets", "").asDouble() +
+                                    caArr->at(0)->get("ca_bal", "").asDouble();
+            } else {
+                 pOut->acct_assets = caArr->at(0)->get("ca_bal", "").asDouble();
+            }
+        }
+
+        if( pOut->type_is_market ) {
+            strncpy(pOut->status_id, pIn->st_submitted_id, cTH_ST_ID_len);
+            pOut->status_id[cTH_ST_ID_len] = '\0';
+        } else {
+            strncpy(pOut->status_id, pIn->st_pending_id, cTH_ST_ID_len);
+            pOut->status_id[cTH_ST_ID_len] = '\0';
+        }
+    }
 }
 
 void TxnRestDB::execute( const TTradeOrderFrame4Input *pIn,
                          TTradeOrderFrame4Output *pOut) {
     ostringstream osSQL;
     char *tmpstr;
-    osSQL << "SELECT * FROM TradeOrderFrame4(" <<
-        pIn->acct_id << "," <<
-        pIn->broker_id << "," <<
-        pIn->charge_amount << "," <<
-        pIn->comm_amount << ",";
     tmpstr = escape( pIn->exec_name );
-    osSQL << tmpstr;
+
+    //N.B. Unlike PGSQL, MySQL does not have sequences. This table uses auto_increment on t_id
+    osSQL << "INSERT INTO trade ( t_dts, t_st_id, t_tt_id, t_is_cash, ";
+    osSQL << "t_s_symb, t_qty, t_bid_price, t_ca_id, t_exec_name, t_trade_price, ";
+    osSQL << "t_chrg, t_comm, t_tax, t_lifo ) VALUES ( getcurrentdate(), '";
+    osSQL << pIn->status_id << "', '" << pIn->trade_type_id << "', " << pIn->is_cash;
+    osSQL << ", '" << pIn->symbol << "', " << pIn->trade_qty << ", " << pIn->requested_price;
+    osSQL << ", '" << tmpstr << "', NULL, " << pIn->charge_amount << ", " << pIn->comm_amount;
+    osSQL << ", 0, " << pIn->is_lifo << ")";
     free( tmpstr );
+    std::vector<Json::Value *> *res = sendQuery( 1, osSQL.str().c_str() );
 
-    osSQL << "," <<
-        pIn->is_cash << "::SMALLINT," <<
-        pIn->is_lifo << "::SMALLINT," <<
-        pIn->requested_price << ",'" <<
-        pIn->status_id << "','" <<
-        pIn->symbol << "'," <<
-        pIn->trade_qty << ",'" <<
-        pIn->trade_type_id << "'," <<
-        pIn->type_is_market << "::SMALLINT)";
+    //Retrieve the written t_id
+    //N.B. There is technically a race condition here, but we assume these conditions are
+    //enough to dodge most of them
+    osSQL << "SELECT t_id FROM trade WHERE t_st_id = '" << pIn->status_id << "' AND ";
+    osSQL << "t_tt_id = '" << pIn->trade_type_id << "' AND t_is_cash = " << pIn->is_cash;
+    osSQL << " AND t_chrg = " << pIn->charge_amount << " AND t_comm = " << pIn->comm_amount;
+    osSQL << " ORDER BY t_dts DESC";
+    std::vector<Json::Value *> *tArr = sendQuery( 1, osSQL.str().c_str() );
+    long trade_id = tArr->at(0)->get("t_id", "").asInt64();
 
-    std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
-    pOut->trade_id = jsonArr->at(0)->get("trade_id", "").asInt64();
+    if( !pIn->type_is_market ) {
+        osSQL.clear();
+        osSQL.str("");
+        osSQL << "INSERT INTO trade_request ( tr_t_id, tr_tt_id, tr_s_symb, tr_qty, ";
+        osSQL << "tr_bid_price, tr_b_id ) VALUES ( " << trade_id << ", '" << pIn->trade_type_id << "', '";
+        osSQL << pIn->symbol << "', " << pIn->trade_qty << ", " << pIn->requested_price << ", " << pIn->broker_id << ")";
+        res = sendQuery( 1, osSQL.str().c_str() );
+    }
+
+    osSQL.clear();
+    osSQL.str("");
+    osSQL << "INSERT INTO trade_history ( th_t_id, th_dts, th_st_id ) VALUES ( ";
+    osSQL << trade_id << ", getcurrentdate(), '" << pIn->status_id << "')";
+    res = sendQuery( 1, osSQL.str().c_str() );
+    pOut->trade_id = trade_id;
 }
 
 void TxnRestDB::execute( const TTradeResultFrame1Input *pIn,
@@ -2154,6 +2299,20 @@ void TxnRestDB::execute( const TTradeUpdateFrame3Input *pIn,
                          TTradeUpdateFrame3Output *pOut ) {
 
     ostringstream osSQL;
+    osSQL << "SELECT t_ca_id, t_exec_name, t_is_cash, t_trade_price, ";
+    osSQL << "t_qty, s_name, t_dts, t_id, t_tt_id, tt_name FROM ";
+    osSQL << "trade, trade_type, security WHERE t_s_symb = '";
+    osSQL << pIn->symbol << "' AND t_dts >= '" << pIn->start_trade_dts.year;
+    osSQL << "-" << pIn->start_trade_dts.month << "-" << pIn->start_trade_dts.day;
+    osSQL << " " << pIn->start_trade_dts.hour << ":" << pIn->start_trade_dts.minute;
+    osSQL << ":" << pIn->start_trade_dts.second << "' AND t_dts <= '";
+    osSQL << pIn->end_trade_dts.year << "-" << pIn->end_trade_dts.month << "-";
+    osSQL << pIn->end_trade_dts.day << " " << pIn->end_trade_dts.hour << ":";
+    osSQL << pIn->end_trade_dts.minute << ":" << pIn->end_trade_dts.second;
+    osSQL << "' AND tt_id = t_tt_id AND s_symb = t_s_symb AND t_ca_id <= ";
+    osSQL << pIn->max_acct_id << " ORDER BY t_dts ASC";
+
+
     osSQL << "SELECT * FROM TradeUpdateFrame3('" <<
         pIn->end_trade_dts.year << "-" <<
         pIn->end_trade_dts.month << "-" <<
