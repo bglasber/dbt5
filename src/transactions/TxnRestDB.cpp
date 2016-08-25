@@ -1911,84 +1911,108 @@ void TxnRestDB::execute( const TTradeResultFrame2Input *pIn,
 void TxnRestDB::execute( const TTradeResultFrame3Input *pIn,
                          TTradeResultFrame3Output *pOut ) {
     ostringstream osSQL;
-    osSQL << "SELECT * FROM TradeResultFrame3(" <<
-        pIn->buy_value << "," <<
-        pIn->cust_id << "," <<
-        pIn->sell_value << "," <<
-        pIn->trade_id << ")";
-
+    osSQL << "SELECT sum(tx_rate) as tx FROM taxrate WHERE tx_id IN ( ";
+    osSQL << "SELECT cx_tx_id FROM customer_taxrate WHERE cx_c_id = " << pIn->cust_id << " )";
     std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+    pOut->tax_amount = jsonArr->at(0)->get("tx", "").asDouble() * (pIn->sell_value - pIn->buy_value);
 
-    pOut->tax_amount = jsonArr->at(0)->get( "tax_amount", "" ).asFloat();
+    osSQL.clear();
+    osSQL.str("");
+    osSQL << "UPDATE trade SET t_tax = " << pOut->tax_amount << " WHERE t_id = " << pIn->trade_id;
+    std::vector<Json::Value *> *res = sendQuery( 1, osSQL.str().c_str() );
 }
 
 void TxnRestDB::execute( const TTradeResultFrame4Input *pIn,
                          TTradeResultFrame4Output *pOut ) {
     ostringstream osSQL;
-    osSQL << "SELECT * FROM TradeResultFrame4(" <<
-        pIn->cust_id << ",'" <<
-        pIn->symbol << "'," <<
-        pIn->trade_qty << ",'" <<
-        pIn->type_id << "')";
-
+    osSQL << "SELECT s_ex_id, s_name FROM security WHERE s_symb = '" << pIn->symbol;
+    osSQL << "'";
     std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
-    pOut->comm_rate = jsonArr->at(0)->get( "comm_rate", "" ).asFloat();
-    strncpy(pOut->s_name, jsonArr->at(0)->get( "s_name", "").asCString(), cS_NAME_len);
+    strncpy(pOut->s_name, jsonArr->at(0)->get("s_name", "").asCString(), cS_NAME_len);
     pOut->s_name[cS_NAME_len] = '\0';
+
+    osSQL.clear();
+    osSQL.str("");
+    osSQL << "SELECT c_tier FROM customer WHERE c_id = " << pIn->cust_id;
+    std::vector<Json::Value *> *cArr = sendQuery( 1, osSQL.str().c_str() );
+
+    osSQL.clear();
+    osSQL.str("");
+    osSQL << "SELECT cr_rate FROM commission_rate WHERE cr_c_tier = ";
+    osSQL << cArr->at(0)->get("c_tier", "").asInt() << "AND  cr_tt_id = '";
+    osSQL << pIn->symbol << "' AND cr_ex_id = '" << jsonArr->at(0)->get("s_ex_id", "").asString();
+    osSQL << "' AND cr_from_qty <= " << pIn->trade_qty << " AND cr_to_qty >= " << pIn->trade_qty;
+    osSQL << " LIMIT 1";
+    std::vector<Json::Value *> *crArr = sendQuery( 1, osSQL.str().c_str() );
+    pOut->comm_rate = crArr->at(0)->get("cr_rate", "").asDouble();
 }
 
 void TxnRestDB::execute( const TTradeResultFrame5Input *pIn ) {
     ostringstream osSQL;
-    osSQL << "SELECT * FROM TradeResultFrame5(" <<
-        pIn->broker_id << "," <<
-        pIn->comm_amount << ",'" <<
-        pIn->st_completed_id << "','" <<
-        pIn->trade_dts.year << "-" <<
-        pIn->trade_dts.month << "-" <<
-        pIn->trade_dts.day << " " <<
-        pIn->trade_dts.hour << ":" <<
-        pIn->trade_dts.minute << ":" <<
-        pIn->trade_dts.second << "'," <<
-        pIn->trade_id << "," <<
-        pIn->trade_price << ")";
+    osSQL << "UPDATE trade SET t_comm = " << pIn->comm_amount << ", ";
+    osSQL << "t_dts = '" << pIn->trade_dts.year << "-" << pIn->trade_dts.month;
+    osSQL << "-" << pIn->trade_dts.day << " " << pIn->trade_dts.hour << ":";
+    osSQL << pIn->trade_dts.minute << ":" << pIn->trade_dts.second << "', t_st_id = '";
+    osSQL << pIn->st_completed_id << "', t_trade_price = " << pIn->trade_price << " WHERE ";
+    osSQL << "t_id = " << pIn->trade_id;
+    std::vector<Json::Value *> *res = sendQuery( 1, osSQL.str().c_str() );
 
-    // For PostgreSQL, see comment in the Concurrency Control chapter, under
-    // the Transaction Isolation section for dealing with serialization
-    // failures.  These serialization failures can occur with REPEATABLE READS
-    // or SERIALIZABLE.
-    std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+    osSQL.clear();
+    osSQL.str("");
+    osSQL << "INSERT INTO trade_history ( th_t_id, th_dts, th_st_id ) VALUES ( ";
+    osSQL << pIn->trade_id << ", '" << pIn->trade_dts.year << "-" << pIn->trade_dts.month;
+    osSQL << "-" << pIn->trade_dts.day << " " << pIn->trade_dts.hour << ":";
+    osSQL << pIn->trade_dts.minute << ":" << pIn->trade_dts.second << "', '";
+    osSQL << pIn->st_completed_id << "')";
+    res = sendQuery( 1, osSQL.str().c_str() );
+
+    osSQL.clear();
+    osSQL.str("");
+    osSQL << "UPDATE broker SET b_comm_total = b_comm_total + " << pIn->comm_amount << ", ";
+    osSQL << "b_num_trades = b_num_trades + 1 WHERE b_id = " << pIn->broker_id;
+    res = sendQuery( 1, osSQL.str().c_str() );
 }
 
 void TxnRestDB::execute( const TTradeResultFrame6Input *pIn,
                          TTradeResultFrame6Output *pOut ) {
     ostringstream osSQL;
-    char *tmpstr;
-    osSQL << "SELECT * FROM TradeResultFrame6(" <<
-        pIn->acct_id << ",'" <<
-        pIn->due_date.year << "-"<<
-        pIn->due_date.month << "-" <<
-        pIn->due_date.day << " " <<
-        pIn->due_date.hour << ":" <<
-        pIn->due_date.minute << ":" <<
-        pIn->due_date.second << "',";
-    tmpstr = escape( pIn->s_name );
-    osSQL << tmpstr;
-    free( tmpstr );
-    osSQL << ", " <<
-        pIn->se_amount << ",'" <<
-        pIn->trade_dts.year << "-" <<
-        pIn->trade_dts.month << "-" <<
-        pIn->trade_dts.day << " " <<
-        pIn->trade_dts.hour << ":" <<
-        pIn->trade_dts.minute << ":" <<
-        pIn->trade_dts.second << "'," <<
-        pIn->trade_id << "," <<
-        pIn->trade_is_cash << "::SMALLINT," <<
-        pIn->trade_qty << ",'" <<
-        pIn->type_name << "')";
+    char cash_type[40];
+    if( pIn->trade_is_cash ) {
+        strcpy(cash_type, "Cash Account");
+    } else {
+        strcpy(cash_type, "Margin");
+    }
+    osSQL << "INSERT INTO settlement( se_t_id, se_cash_type, se_cash_due_date, se_amt ) VALUES ( ";
+    osSQL << pIn->trade_id << ", '" << cash_type << "', '" << pIn->due_date.year << "-";
+    osSQL << pIn->due_date.month << "-" << pIn->due_date.day << " " << pIn->due_date.hour << ":";
+    osSQL << pIn->due_date.minute << ":" << pIn->due_date.second << "', " << pIn->se_amount;
+    std::vector<Json::Value *> *res = sendQuery( 1, osSQL.str().c_str() );
 
+    if( pIn->trade_is_cash ) {
+        osSQL.clear();
+        osSQL.str("");
+        osSQL << "UPDATE customer_account SET ca_bal = ca_bal + " << pIn->se_amount << " ";
+        osSQL << "WHERE ca_id = " << pIn->acct_id;
+        res = sendQuery( 1, osSQL.str().c_str() );
+
+        osSQL.clear();
+        osSQL.str("");
+        char *tmpstr;
+        tmpstr = escape( pIn->s_name );
+        osSQL << "INSERT INTO cash_transaction ( ct_dts, ct_t_id, ct_amt, ct_name ) VALUES ( '";
+        osSQL << pIn->trade_dts.year << "-" << pIn->trade_dts.month << "-" << pIn->trade_dts.day << " ";
+        osSQL << pIn->trade_dts.hour << ":" << pIn->trade_dts.minute << ":" << pIn->trade_dts.second << "', ";
+        osSQL << pIn->trade_id << ", " << pIn->se_amount << ", '" << pIn->type_name << " " + pIn->trade_qty;
+        osSQL << " shares of " << + tmpstr << "' )";
+        res = sendQuery( 1, osSQL.str().c_str() );
+        free( tmpstr );
+    }
+
+    osSQL.clear();
+    osSQL.str("");
+    osSQL << "SELECT ca_bal FROM customer_account WHERE ca_id = " << pIn->acct_id;
     std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
-    pOut->acct_bal = jsonArr->at(0)->get( "acct_bal", "" ).asFloat();
+    pOut->acct_bal = jsonArr->at(0)->get("ca_bal", "").asDouble();
 }
 
 void TxnRestDB::execute( const TTradeStatusFrame1Input *pIn,
