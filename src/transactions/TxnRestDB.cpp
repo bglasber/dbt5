@@ -8,60 +8,25 @@
 
 char *TxnRestDB::escape(string s)
 {
+    //Excessive, but guaranteed to work
+    char *loc = (char *) malloc( s.size() * 2 );
+    char *str = (char *) s.c_str();
+    unsigned i = 0;
+    unsigned j = 0;
+    for( ;; ) {
+        if( str[j] == '\0' ) {
+            loc[i] = '\0';
+            break;
+        } else if( str[j++] == '\'' ) {
+            loc[i++] = '\\';
+            loc[i++] = '\'';
+        } else {
+            loc[i++] = str[j++];
+        }
+    }
     //PQescapeLiteral
     //malloc and ecape chars
-    return NULL;
-}
-
-/* These might just be the most ridiculous macros I have ever written
-*  I bet they're fast though
-*/
-#define INT_VEC_ASSIGN( field, vec, out_struct, out ) \
-    do {\
-        _Pragma("GCC ivdep") \
-        for( unsigned vec_iter = 0; vec_iter < vec->size(); vec_iter++ ) {\
-            int ptr_offset = offsetof( out_struct, field ); \
-            ((int *)(((char *)out)+ptr_offset))[vec_iter] = vec->at(vec_iter)->get( # field, "" ).asInt(); \
-        } \
-    } while(0)
-
-
-#define LONG_VEC_ASSIGN( field, vec, out_struct, out ) \
-    do {\
-        _Pragma("GCC ivdep") \
-        for( unsigned vec_iter = 0; vec_iter < vec->size(); vec_iter++ ) {\
-            int ptr_offset = offsetof( out_struct, field ); \
-            ((long *)(((char *)out)+ptr_offset))[vec_iter] = vec->at(vec_iter)->get( # field, "" ).asInt64(); \
-        } \
-    } while(0)
-
-#define FLOAT_VEC_ASSIGN( field, vec, out_struct, out ) \
-    do {\
-        _Pragma("GCC ivdep") \
-        for( unsigned vec_iter = 0; vec_iter < vec->size(); vec_iter++ ) {\
-            int ptr_offset = offsetof( out_struct, field ); \
-            ((float *)(((char *)out)+ptr_offset))[vec_iter] = vec->at(vec_iter)->get( # field, "" ).asFloat(); \
-        } \
-    } while(0)
-
-#define STR_VEC_ASSIGN( field, field_max_len, vec, out_struct, out ) \
-    do {\
-        _Pragma("GCC ivdep") \
-        for( unsigned vec_iter = 0; vec_iter < vec->size(); vec_iter++ ) {\
-            int ptr_offset = offsetof( out_struct, field ); \
-            strncpy( ((char **) (((char *)out)+ptr_offset))[vec_iter], vec->at(vec_iter)->get( # field, "" ).asCString(), field_max_len ); \
-            ((char **) (((char *)out)+ptr_offset))[vec_iter][field_max_len] = '\0'; \
-        } \
-    } while(0)
-
-bool inline check_count(int should, int is, const char *file, int line) {
-    if (should != is) {
-        cout << "*** array length (" << is <<
-            ") does not match expections (" << should << "): " << file <<
-            ":" << line << endl;
-        return false;
-    }
-    return true;
+    return loc;
 }
 
 // Array Tokenizer
@@ -176,7 +141,7 @@ void TxnRestDB::execute( const TBrokerVolumeFrame1Input *pIn,
     ostringstream osSQL;
 
     //Unrolled Transaction
-    osSQL << "SELECT b_name as broker_name, ";
+    osSQL << "SELECT b_name, ";
     osSQL << "sum(tr_qty * tr_bid_price) as volume ";
     osSQL << "FROM trade_request, sector, industry, ";
     osSQL << "company, broker, security ";
@@ -198,8 +163,12 @@ void TxnRestDB::execute( const TBrokerVolumeFrame1Input *pIn,
     jsonArr = sendQuery( 1, osSQL.str().c_str() );
     pOut->list_len = jsonArr->size(); //row_count
 
-    STR_VEC_ASSIGN( broker_name, cB_NAME_len, jsonArr, TBrokerVolumeFrame1Output, pOut );
-    FLOAT_VEC_ASSIGN( volume, jsonArr, TBrokerVolumeFrame1Output, pOut );
+    for( unsigned i = 0; i < jsonArr->size(); i++ ) {
+        strncpy( pOut->broker_name[i], jsonArr->at(i)->get("b_name", "").asCString(),
+                 cB_NAME_len );
+        pOut->broker_name[i][cB_NAME_len] = '\0';
+        pOut->volume[i] = jsonArr->at(i)->get("volume", "").asDouble();
+    }
 
     //TODO: Free JSON
 }
@@ -292,17 +261,19 @@ void TxnRestDB::execute( const TCustomerPositionFrame1Input *pIn,
     osSQL.str("");
 
     //Now retrieve account information
-    osSQL << "SELECT ca_id as acct_id, ca_bal as cash_bal, ";
-    osSQL << "IFNULL(sum(hs_qty * lt_price), 0) as assets_total ";
+    osSQL << "SELECT ca_id, ca_bal, ";
+    osSQL << "IFNULL(sum(hs_qty * lt_price), 0) as asset_total ";
     osSQL << "FROM customer_account LEFT OUTER JOIN ";
     osSQL << "holding_summary ON hs_ca_id = ca_id, ";
     osSQL << "last_trade WHERE ca_c_id = " << cust_id;
     osSQL << " AND lt_s_symb = hs_s_symb GROUP BY ";
     osSQL << "ca_id, ca_bal ORDER BY 3 ASC LIMIT 10";
 
-    LONG_VEC_ASSIGN( acct_id, jsonArr, TCustomerPositionFrame1Output, pOut );
-    FLOAT_VEC_ASSIGN( asset_total, jsonArr, TCustomerPositionFrame1Output, pOut );
-    FLOAT_VEC_ASSIGN( cash_bal, jsonArr, TCustomerPositionFrame1Output, pOut );
+    for( unsigned i = 0; i < jsonArr->size(); i++ ) {
+        pOut->acct_id[i] = jsonArr->at(i)->get("ca_id", "").asInt64();
+        pOut->cash_bal[i] = jsonArr->at(i)->get("ca_bal", "").asDouble();
+        pOut->asset_total[i] = jsonArr->at(i)->get("asset_total", "").asDouble();
+    }
 }
 
 void TxnRestDB::execute( const TCustomerPositionFrame2Input *pIn,
@@ -310,7 +281,7 @@ void TxnRestDB::execute( const TCustomerPositionFrame2Input *pIn,
 {
 
     ostringstream osSQL;
-    osSQL << "SELECT t_id as trade_id, t_s_symb as symbol, t_qty as qty, st_name as trade_status, th_dts as hist_dts ";
+    osSQL << "SELECT t_id, t_s_symb, t_qty, st_name, th_dts ";
     osSQL << "FROM ( SELECT t_id as id FROM trade WHERE t_ca_id = " << pIn->acct_id;
     osSQL << " ORDER BY t_dts DESC LIMIT 10 ) as T, TRADE, TRADE_HISTORY, ";
     osSQL << "STATUS_TYPE WHERE t_id = id AND th_t_id = t_id AND ";
@@ -320,7 +291,15 @@ void TxnRestDB::execute( const TCustomerPositionFrame2Input *pIn,
     pOut->hist_len = jsonArr->size();
 
     for( unsigned i = 0; i < jsonArr->size(); i++ ) {
-        sscanf(jsonArr->at(i)->get("hist_dts", "" ).asCString(), "%hd-%hd-%hd %hd:%hd:%hd",
+        pOut->trade_id[i] = jsonArr->at(i)->get("t_id", "").asInt64();
+        strncpy( pOut->symbol[i],  jsonArr->at(i)->get("t_s_symb", "").asCString(),
+                 cSYMBOL_len );
+        pOut->symbol[i][cSYMBOL_len] = '\0';
+        pOut->qty[i] = jsonArr->at(i)->get("t_qty", "").asInt();
+        strncpy( pOut->trade_status[i], jsonArr->at(i)->get("st_name", "").asCString(),
+                 cST_NAME_len );
+        pOut->trade_status[i][cST_NAME_len] = '\0';
+        sscanf(jsonArr->at(i)->get("th_dts", "" ).asCString(), "%hd-%hd-%hd %hd:%hd:%hd",
                 &pOut->hist_dts[i].year,
                 &pOut->hist_dts[i].month,
                 &pOut->hist_dts[i].day,
@@ -328,11 +307,6 @@ void TxnRestDB::execute( const TCustomerPositionFrame2Input *pIn,
                 &pOut->hist_dts[i].minute,
                 &pOut->hist_dts[i].second);
     }
-
-    INT_VEC_ASSIGN( qty, jsonArr, TCustomerPositionFrame2Output, pOut );
-    STR_VEC_ASSIGN( symbol, cSYMBOL_len, jsonArr, TCustomerPositionFrame2Output, pOut );
-    LONG_VEC_ASSIGN( trade_id, jsonArr, TCustomerPositionFrame2Output, pOut );
-    STR_VEC_ASSIGN( trade_status, cST_NAME_len, jsonArr, TCustomerPositionFrame2Output, pOut );
 
     //TODO: free jsonArr
 }
@@ -1078,7 +1052,7 @@ void TxnRestDB::execute( const TTradeCleanupFrame1Input *pIn ) {
 
 void TxnRestDB::execute( const TTradeLookupFrame1Input *pIn,
                          TTradeLookupFrame1Output *pOut ) {
-    long num_found = 0;
+    pOut->num_found = 0;
     for( int i = 0; i < pIn->max_trades; i++ ) {
         ostringstream osSQL;
         osSQL << "SELECT t_bid_price, t_exec_name, t_is_cash, ";
@@ -1092,7 +1066,7 @@ void TxnRestDB::execute( const TTradeLookupFrame1Input *pIn,
         pOut->trade_info[i].is_cash = jsonArr->at(0)->get("t_is_cash", "").asBool();
         pOut->trade_info[i].is_market = jsonArr->at(0)->get( "t_is_mrkt", "").asBool();
         pOut->trade_info[i].trade_price = jsonArr->at(0)->get("t_trade_price", "").asDouble();
-        num_found += jsonArr->size();
+        pOut->num_found += jsonArr->size();
 
         osSQL.clear();
         osSQL.str("");
@@ -1167,7 +1141,7 @@ void TxnRestDB::execute( const TTradeLookupFrame2Input *pIn,
         pOut->trade_info[i].trade_price = jsonArr->at(i)->get("t_trade_price", "").asDouble();
     }
 
-    long num_found = jsonArr->size();
+    pOut->num_found = jsonArr->size();
     for( unsigned i = 0; i < jsonArr->size(); i++ ) {
         osSQL.clear();
         osSQL.str("");
@@ -1264,10 +1238,10 @@ void TxnRestDB::execute( const TTradeLookupFrame3Input *pIn,
         strncpy( pOut->trade_info[i].trade_type, jsonArr->at(i)->get("t_tt_id", "").asCString(), cTT_ID_len );
         pOut->trade_info[i].trade_type[cTT_ID_len] = '\0';
     }
-    
+
     osSQL.clear();
     osSQL.str("");
-     
+
     pOut->num_found = jsonArr->size();
 
     for( int i = 0; i < pOut->num_found; i++ ) {
