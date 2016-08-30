@@ -99,24 +99,34 @@ CMarketExchange::CMarketExchange(char *szFileLoc,
 {
 	char filename[iMaxPath + 1];
 	snprintf(filename, iMaxPath, "%s/MarketExchange.log", outputDirectory);
+	cout << "Telling m_pLog to use " << filename << endl;
 	m_pLog = new CEGenLogger(eDriverEGenLoader, 0, filename, &m_fmt);
+	cout << "Done." << endl;
 
 	snprintf(filename, iMaxPath, "%s/MarketExchange_Error.log",
 			outputDirectory);
+	cout << "Marking err log" << filename << endl;
 	m_fLog.open(filename, ios::out);
+	cout << "Done." << endl;
 	snprintf(filename, iMaxPath, "%s/%s", outputDirectory, MEE_MIX_LOG_NAME);
+	cout << "Marking output dir " << filename << endl;
 	m_fMix.open(filename, ios::out);
+	cout << "Done." << endl;
 
+	cout << "Initializing MEESUT..." << endl;
 	// Initialize MEESUT
 	m_pCMEESUT = new CMEESUT(szBHaddr, iBHlistenPort, &m_fLog, &m_fMix,
 			&m_LogLock, &m_MixLock);
 
+	cout << "Done." << endl;
+	cout << "Initializing MEE..." << endl;
 	// Initialize MEE
 	CInputFiles inputFiles;
 	inputFiles.Initialize(eDriverEGenLoader, iConfiguredCustomerCount,
 			iActiveCustomerCount, szFileLoc);
 	m_pCMEE = new CMEE(0, m_pCMEESUT, m_pLog, inputFiles, 1);
 	m_pCMEE->SetBaseTime();
+	cout << "Done." << endl;
 }
 
 // Destructor

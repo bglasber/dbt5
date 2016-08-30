@@ -92,6 +92,7 @@ void inline TokenizeSmart(const string& str, vector<string>& tokens)
 CDBConnection::CDBConnection(const char *szHost, const char *szDBName,
 		const char *szDBPort)
 {
+/*
 	szConnectStr[0] = '\0';
 
 	// Just pad everything with spaces so we don't have to figure out if it's
@@ -111,6 +112,8 @@ CDBConnection::CDBConnection(const char *szHost, const char *szDBName,
 
 	sprintf(name, "%d", (int) pthread_self());
 	m_Conn = PQconnectdb(szConnectStr);
+*/
+	printf("Didn't create connection...\n");
 }
 
 // Destructor: Disconnect from server

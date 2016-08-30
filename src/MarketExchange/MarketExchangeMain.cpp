@@ -125,8 +125,10 @@ int main(int argc, char *argv[])
 	cout << "Active customer count: " << iActiveCustomerCount << endl;
 	cout << "Brokerage House address: " << szBHaddr << endl;
 	cout << "Brokerage House port: " << iBHlistenPort << endl;
+	cout << "Entering Try Block..." << endl;
 
 	try {
+		cout << "Trying to create market exchange..." << endl;
 		CMarketExchange MarketExchange(szFileLoc, iConfiguredCustomerCount,
 				iActiveCustomerCount, iListenPort, szBHaddr, iBHlistenPort,
 				outputDirectory);

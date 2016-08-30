@@ -428,12 +428,12 @@ else
 fi
 
 # Restart database.
-${DB_COMMAND} dbt5-${DBMS}-stop-db
-if [ ! "x${DB_HOSTNAME}" = "x" ] && [ ! "x${DB_HOSTNAME}" = "xlocalhost" ]; then
-	${DB_COMMAND} "dbt5-${DBMS}-start-db -p \"${DB_PARAMS}\" -o ${DB_OUTPUT_DIR}" || exit 1
-else
-	dbt5-${DBMS}-start-db -p "${DB_PARAMS}" -o ${DB_OUTPUT_DIR} || exit 1
-fi
+#${DB_COMMAND} dbt5-${DBMS}-stop-db
+#if [ ! "x${DB_HOSTNAME}" = "x" ] && [ ! "x${DB_HOSTNAME}" = "xlocalhost" ]; then
+#	${DB_COMMAND} "dbt5-${DBMS}-start-db -p \"${DB_PARAMS}\" -o ${DB_OUTPUT_DIR}" || exit 1
+#else
+#	dbt5-${DBMS}-start-db -p "${DB_PARAMS}" -o ${DB_OUTPUT_DIR} || exit 1
+#fi
 
 echo ""
 echo "************************************************************************"
@@ -466,6 +466,10 @@ do_sleep 1
 #
 echo
 echo "2. Starting Market Exchange server"
+echo "MarketExchangeMain -c ${CUSTOMERS_INSTANCE} -t ${CUSTOMERS_TOTAL} \
+		-i ${EGENDIR}/flat_in \
+		-o ${MEE_OUTPUT_DIR} > ${MEE_OUTPUT_DIR}/mee.out 2>&1 &"
+
 MarketExchangeMain -c ${CUSTOMERS_INSTANCE} -t ${CUSTOMERS_TOTAL} \
 		-i ${EGENDIR}/flat_in \
 		-o ${MEE_OUTPUT_DIR} > ${MEE_OUTPUT_DIR}/mee.out 2>&1 &
@@ -617,7 +621,7 @@ dbt5-post-process ${MIXFILE} > ${RESULTSFILE}
 echo "Killing Servers..."
 killall BrokerageHouseMain MarketExchangeMain DriverMain 2> /dev/null
 
-${DB_COMMAND} dbt5-${DBMS}-stop-db
+#${DB_COMMAND} dbt5-${DBMS}-stop-db
 
 if [ ${USE_OPROFILE} -eq 1 ]; then
 	oprofile_annotate ${DRIVER_OUTPUT_DIR} &

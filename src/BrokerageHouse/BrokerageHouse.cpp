@@ -45,9 +45,12 @@ void *workerThread(void *data)
 				pThrParam->pBrokerageHouse->m_szHost,
 				pThrParam->pBrokerageHouse->m_szDBName,
 				pThrParam->pBrokerageHouse->m_szDBPort);
+		pThrParam->pBrokerageHouse->logErrorMessage("Null conn created...\n");
 		pDBConnection->setBrokerageHouse(pThrParam->pBrokerageHouse);
+		pThrParam->pBrokerageHouse->logErrorMessage("Set brokerageHouse on conn...\n");
 		CSendToMarket sendToMarket = CSendToMarket(
 				&(pThrParam->pBrokerageHouse->m_fLog));
+		pThrParam->pBrokerageHouse->logErrorMessage("sendToMarket created...\n");
 		CMarketFeedDB marketFeedDB(pDBConnection);
 		CMarketFeed marketFeed = CMarketFeed(&marketFeedDB, &sendToMarket);
 		CTradeOrderDB tradeOrderDB(pDBConnection);
@@ -75,8 +78,11 @@ void *workerThread(void *data)
 		CTradeResultDB tradeResultDB(pDBConnection);
 		CTradeResult tradeResult = CTradeResult(&tradeResultDB);
 
+		pThrParam->pBrokerageHouse->logErrorMessage("DB tran objects created...\n");
+
 		do {
 			try {
+				pThrParam->pBrokerageHouse->logErrorMessage("trying to receive..\n");
 				sockDrv.dbt5Receive(reinterpret_cast<void *>(pMessage),
 						sizeof(TMsgDriverBrokerage));
 			} catch(CSocketErr *pErr) {
@@ -93,61 +99,89 @@ void *workerThread(void *data)
 			}
 
 			try {
+
+				pThrParam->pBrokerageHouse->logErrorMessage("receiving message.\n");
 				//  Parse Txn type
 				switch (pMessage->TxnType) {
 				case BROKER_VOLUME:
+					pThrParam->pBrokerageHouse->logErrorMessage("broker volume transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunBrokerVolume(
 							&(pMessage->TxnInput.BrokerVolumeTxnInput),
 							brokerVolume);
+					pThrParam->pBrokerageHouse->logErrorMessage("broker volume transaction done...\n");
 					break;
 				case CUSTOMER_POSITION:
+					pThrParam->pBrokerageHouse->logErrorMessage("customer_position transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunCustomerPosition(
 							&(pMessage->TxnInput.CustomerPositionTxnInput),
 							customerPosition);
+					pThrParam->pBrokerageHouse->logErrorMessage("customer_position transaction done...\n");
 					break;
 				case MARKET_FEED:
+					pThrParam->pBrokerageHouse->logErrorMessage("market_feed transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunMarketFeed(
 							&(pMessage->TxnInput.MarketFeedTxnInput), marketFeed);
+					pThrParam->pBrokerageHouse->logErrorMessage("market_feed transaction done...\n");
 					break;
 				case MARKET_WATCH:
+					pThrParam->pBrokerageHouse->logErrorMessage("market_watch transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunMarketWatch(
 							&(pMessage->TxnInput.MarketWatchTxnInput), marketWatch);
+
+					pThrParam->pBrokerageHouse->logErrorMessage("market_watch transaction done...\n");
 					break;
 				case SECURITY_DETAIL:
+					pThrParam->pBrokerageHouse->logErrorMessage("security_detail transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunSecurityDetail(
 							&(pMessage->TxnInput.SecurityDetailTxnInput),
 							securityDetail);
+					pThrParam->pBrokerageHouse->logErrorMessage("security_detail transaction done...\n");
 					break;
 				case TRADE_LOOKUP:
+					pThrParam->pBrokerageHouse->logErrorMessage("trade_lookup transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunTradeLookup(
 							&(pMessage->TxnInput.TradeLookupTxnInput), tradeLookup);
+					pThrParam->pBrokerageHouse->logErrorMessage("trade_lookup transaction done...\n");
 					break;
 				case TRADE_ORDER:
+					pThrParam->pBrokerageHouse->logErrorMessage("trade_order transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunTradeOrder(
 							&(pMessage->TxnInput.TradeOrderTxnInput), tradeOrder);
+					pThrParam->pBrokerageHouse->logErrorMessage("trade_order transaction done...\n");
 					break;
 				case TRADE_RESULT:
+					pThrParam->pBrokerageHouse->logErrorMessage("trade_result transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunTradeResult(
 							&(pMessage->TxnInput.TradeResultTxnInput), tradeResult);
+					pThrParam->pBrokerageHouse->logErrorMessage("trade_result transaction done...\n");
 					break;
 				case TRADE_STATUS:
+					pThrParam->pBrokerageHouse->logErrorMessage("trade_status transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunTradeStatus(
 							&(pMessage->TxnInput.TradeStatusTxnInput),
 							tradeStatus);
+					pThrParam->pBrokerageHouse->logErrorMessage("trade_status transaction done...\n");
 					break;
 				case TRADE_UPDATE:
+					pThrParam->pBrokerageHouse->logErrorMessage("trade_update transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunTradeUpdate(
 							&(pMessage->TxnInput.TradeUpdateTxnInput), tradeUpdate);
+					pThrParam->pBrokerageHouse->logErrorMessage("trade_update transaction done...\n");
 					break;
 				case DATA_MAINTENANCE:
+					pThrParam->pBrokerageHouse->logErrorMessage("data_maintenance transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunDataMaintenance(
 							&(pMessage->TxnInput.DataMaintenanceTxnInput),
 							dataMaintenance);
+					pThrParam->pBrokerageHouse->logErrorMessage("data_maintenance transaction done...\n");
 					break;
 				case TRADE_CLEANUP:
+
+					pThrParam->pBrokerageHouse->logErrorMessage("trade_cleanup transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunTradeCleanup(
 							&(pMessage->TxnInput.TradeCleanupTxnInput),
 							tradeCleanup);
+					pThrParam->pBrokerageHouse->logErrorMessage("trade_cleanup transaction done...\n");
 					break;
 				default:
 					cout << "wrong txn type" << endl;
@@ -546,11 +580,14 @@ INT32 CBrokerageHouse::RunDataMaintenance(PDataMaintenanceTxnInput pTxnInput,
 INT32 CBrokerageHouse::RunTradeCleanup(PTradeCleanupTxnInput pTxnInput,
 		CTradeCleanup &tradeCleanup)
 {
+	
 	TTradeCleanupTxnOutput tcOutput;
 	memset(&tcOutput, 0, sizeof(TTradeCleanupTxnOutput));
 
 	try {
+		logErrorMessage("Starting txn...\n");
 		tradeCleanup.DoTxn(pTxnInput, &tcOutput);
+		logErrorMessage("Done txn...\n");
 	} catch (const exception &e) {
 		logErrorMessage("TC EXCEPTION\n", false);
 		tcOutput.status = CBaseTxnErr::EXPECTED_ROLLBACK;

@@ -1,0 +1,8 @@
+#!/bin/bash
+DBT5NAME=dbt5
+USERNAME=kronos
+mysql -u root -e "DROP DATABASE ${DBT5NAME}";
+mysql -u root -e "CREATE DATABASE ${DBT5NAME}";
+mysql -u root -e "DROP USER '${USERNAME}'@'%'";
+mysql -u root -e "CREATE USER '${USERNAME}'@'%'";
+mysql -u root -e "GRANT ALL ON dbt5.* TO ${USERNAME}";

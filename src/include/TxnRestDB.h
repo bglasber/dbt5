@@ -11,7 +11,7 @@
 using TPCE::TBrokerVolumeFrame1Input;
 using TPCE::TBrokerVolumeFrame1Output;
 
-#define REST_QUERY_URL "http://10.27.16.3:8080/kronos/rest/query/%d"
+#define REST_QUERY_URL "http://localhost:8080/kronos/rest/query/1"
 class TxnRestDB {
     CURL *curl;
     TTradeRequest m_TriggeredLimitOrders;
