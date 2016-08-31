@@ -1184,6 +1184,7 @@ void TxnRestDB::execute( const TTradeCleanupFrame1Input *pIn ) {
 
 void TxnRestDB::execute( const TTradeLookupFrame1Input *pIn,
                          TTradeLookupFrame1Output *pOut ) {
+	cout << "trade lookup start..." << endl;
     pOut->num_found = 0;
     for( int i = 0; i < pIn->max_trades; i++ ) {
         ostringstream osSQL;
@@ -1213,8 +1214,16 @@ void TxnRestDB::execute( const TTradeLookupFrame1Input *pIn,
             osSQL << "SELECT ct_amt, ct_dts, ct_name FROM cash_transaction ";
             osSQL << "WHERE ct_t_id = " << pIn->trade_id[i];
             std::vector<Json::Value *> *ctArr = sendQuery( 1, osSQL.str().c_str() );
+	cout << "Frame 1 DTS sent, reading objects...";
             pOut->trade_info[i].cash_transaction_amount = ctArr->at(0)->get("ct_amt", "").asDouble();
-            sscanf(ctArr->at(0)->get("ct_dts", "").asCString(), "%hd-%hd-%hd %hd:%hd:%hd",
+            time_t t = ctArr->at(0)->get( "ct_dts", "" ).asInt64() / 1000;
+            struct tm *ti = localtime( &t );
+            char buff[56];
+	    memset( buff, '\0', sizeof(buff) );
+            strftime( buff, 56, "%F %T", ti );
+	    cout << "Interpreted time: " << buff << endl;
+
+            sscanf(buff, "%hd-%hd-%hd %hd:%hd:%hd",
                     &pOut->trade_info[i].cash_transaction_dts.year,
                     &pOut->trade_info[i].cash_transaction_dts.month,
                     &pOut->trade_info[i].cash_transaction_dts.day,
@@ -1231,7 +1240,12 @@ void TxnRestDB::execute( const TTradeLookupFrame1Input *pIn,
             osSQL << "ORDER BY th_dts LIMIT 3";
             std::vector<Json::Value *> *thArr = sendQuery( 1, osSQL.str().c_str() );
             for( unsigned j = 0; j < thArr->size(); j++ ) {
-                sscanf(thArr->at(j)->get("th_dts","").asCString(), "%hd-%hd-%hd %hd:%hd:%hd",
+		cout << "Starting loop" << endl;
+                memset( buff, '\0', sizeof(buff) );
+                t = thArr->at(j)->get("th_dts", "").asInt64();
+                ti = localtime( &t );
+                strftime( buff, 56, "%F %T", ti );
+                sscanf(buff, "%hd-%hd-%hd %hd:%hd:%hd",
                         &pOut->trade_info[i].trade_history_dts[j].year,
                         &pOut->trade_info[i].trade_history_dts[j].month,
                         &pOut->trade_info[i].trade_history_dts[j].day,
@@ -1245,10 +1259,12 @@ void TxnRestDB::execute( const TTradeLookupFrame1Input *pIn,
             }
         }
     }
+	cout << "First frame done..." << endl;
 }
 
 void TxnRestDB::execute( const TTradeLookupFrame2Input *pIn,
                          TTradeLookupFrame2Output *pOut ) {
+	cout << "Second frame srtarting..." << endl;
     ostringstream osSQL;
     osSQL << "SELECT t_bid_price, t_exec_name, t_is_cash, ";
     osSQL << "t_id, t_trade_price FROM trade WHERE ";
@@ -1301,8 +1317,18 @@ void TxnRestDB::execute( const TTradeLookupFrame2Input *pIn,
             osSQL << "SELECT ct_amt, ct_dts, ct_name FROM cash_transaction ";
             osSQL << "WHERE ct_t_id = " << jsonArr->at(i)->get("t_id", "").asInt64();
             std::vector<Json::Value *> *ctArr = sendQuery(1, osSQL.str().c_str() );
+		cout << "Cash transaction done!" << endl;
             pOut->trade_info[i].cash_transaction_amount = ctArr->at(0)->get("ct_amt", "").asDouble();
-            sscanf(ctArr->at(0)->get("ct_dts", "").asCString(), "%hd-%hd-%hd %hd:%hd:%hd",
+		cout << "Done amount" << endl;
+
+            time_t t = ctArr->at(0)->get( "ct_dts", "" ).asInt64() / 1000;
+            struct tm *ti = localtime( &t );
+            char buff[56];
+	    memset( buff, '\0', sizeof(buff) );
+            strftime( buff, 56, "%F %T", ti );
+	    cout << "Interpreted time: " << buff << endl;
+
+            sscanf( buff, "%hd-%hd-%hd %hd:%hd:%hd",
                 &pOut->trade_info[i].cash_transaction_dts.year,
                 &pOut->trade_info[i].cash_transaction_dts.month,
                 &pOut->trade_info[i].cash_transaction_dts.day,
@@ -1317,12 +1343,20 @@ void TxnRestDB::execute( const TTradeLookupFrame2Input *pIn,
         }
         osSQL.clear();
         osSQL.str("");
-        osSQL << "SELECT th_dts th_st_id FROM trade_history WHERE ";
+        osSQL << "SELECT th_dts, th_st_id FROM trade_history WHERE ";
         osSQL << "th_t_id = " << jsonArr->at(0)->get("t_id", "").asInt64();
         osSQL << " ORDER BY th_dts LIMIT 3";
         std::vector<Json::Value *> *thArr = sendQuery( 1, osSQL.str().c_str() );
+
         for( unsigned j = 0; j < thArr->size(); j++ ) {
-            sscanf(thArr->at(j)->get("th_dts", "").asCString(), "%hd-%hd-%hd %hd:%hd:%hd",
+            time_t t = thArr->at(j)->get( "th_dts", "" ).asInt64() / 1000;
+            struct tm *ti = localtime( &t );
+            char buff[56];
+	    memset( buff, '\0', sizeof(buff) );
+            strftime( buff, 56, "%F %T", ti );
+	    cout << "Interpreted time: " << buff << endl;
+
+            sscanf( buff, "%hd-%hd-%hd %hd:%hd:%hd",
               &pOut->trade_info[i].trade_history_dts[j].year,
               &pOut->trade_info[i].trade_history_dts[j].month,
               &pOut->trade_info[i].trade_history_dts[j].day,
@@ -1336,10 +1370,13 @@ void TxnRestDB::execute( const TTradeLookupFrame2Input *pIn,
         }
 
     }
+	cout << "Done executing frame 2!" << endl;
 }
 
 void TxnRestDB::execute( const TTradeLookupFrame3Input *pIn,
                          TTradeLookupFrame3Output *pOut ) {
+
+	cout << "Frame 3 started..." << endl;
     ostringstream osSQL;
     osSQL << "SELECT t_ca_id, t_exec_name, t_is_cash, t_trade_price, ";
     osSQL << "t_qty, t_dts, t_id, t_tt_id FROM trade WHERE t_s_symb = '";
@@ -1352,6 +1389,7 @@ void TxnRestDB::execute( const TTradeLookupFrame3Input *pIn,
     osSQL << ":" << pIn->end_trade_dts.second << "' AND t_ca_id <= " << pIn->max_acct_id << " ORDER BY ";
     osSQL << "t_dts ASC LIMIT " << pIn->max_trades;
     std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
+
     for( unsigned i = 0; i < jsonArr->size(); i++ ) {
         pOut->trade_info[i].acct_id = jsonArr->at(i)->get("t_ca_id", "").asInt64();
         strncpy( pOut->trade_info[i].exec_name, jsonArr->at(i)->get("t_exec_name", "").asCString(), cEXEC_NAME_len );
@@ -1359,7 +1397,15 @@ void TxnRestDB::execute( const TTradeLookupFrame3Input *pIn,
         pOut->trade_info[i].is_cash = jsonArr->at(i)->get("t_is_cash", "").asBool();
         pOut->trade_info[i].price = jsonArr->at(i)->get("t_trade_price", "").asDouble();
         pOut->trade_info[i].quantity = jsonArr->at(i)->get("t_qty", "").asInt();
-        sscanf( jsonArr->at(i)->get("t_dts", "").asCString(), "%hd-%hd-%hd %hd:%hd:%hd",
+
+	time_t t = jsonArr->at(i)->get( "t_dts", "" ).asInt64() / 1000;
+	struct tm *ti = localtime( &t );
+	char buff[56];
+	memset( buff, '\0', sizeof(buff) );
+	strftime( buff, 56, "%F %T", ti );
+	cout << "Interpreted time: " << buff << endl;
+
+        sscanf( buff, "%hd-%hd-%hd %hd:%hd:%hd",
                 &pOut->trade_info[i].trade_dts.year,
                 &pOut->trade_info[i].trade_dts.month,
                 &pOut->trade_info[i].trade_dts.day,
@@ -1370,6 +1416,8 @@ void TxnRestDB::execute( const TTradeLookupFrame3Input *pIn,
         strncpy( pOut->trade_info[i].trade_type, jsonArr->at(i)->get("t_tt_id", "").asCString(), cTT_ID_len );
         pOut->trade_info[i].trade_type[cTT_ID_len] = '\0';
     }
+
+	cout << "Block 1 done!" << endl;
 
     osSQL.clear();
     osSQL.str("");
@@ -1396,11 +1444,18 @@ void TxnRestDB::execute( const TTradeLookupFrame3Input *pIn,
         if( jsonArr->at(i)->get("t_is_cash", "").asBool() ) {
             osSQL.clear();
             osSQL.str("");
-            osSQL << "SELECT ct_amt, ct_dts, ct_name FROM cash_transaction ";
+            osSQL << "SELECT ct_amt, ct_dts, ct_name FROM cash_transaction WHERE ";
             osSQL << "ct_t_id = " << jsonArr->at(i)->get("t_id", "").asInt64();
             std::vector<Json::Value *> *ctArr = sendQuery( 1, osSQL.str().c_str() );
+	    time_t t = ctArr->at(0)->get( "ct_dts", "" ).asInt64() / 1000;
+	    struct tm *ti = localtime( &t );
+	    char buff[56];
+	    memset( buff, '\0', sizeof(buff) );
+	    strftime( buff, 56, "%F %T", ti );
+	    cout << "Interpreted time: " << buff << endl;
+
             pOut->trade_info[i].cash_transaction_amount = ctArr->at(0)->get("ct_amt", "").asDouble();
-            sscanf( ctArr->at(0)->get("ct_dts", "").asCString(), "%hd-%hd-%hd %hd:%hd:%hd",
+            sscanf( buff, "%hd-%hd-%hd %hd:%hd:%hd",
                 &pOut->trade_info[i].cash_transaction_dts.year,
                 &pOut->trade_info[i].cash_transaction_dts.month,
                 &pOut->trade_info[i].cash_transaction_dts.day,
@@ -1413,6 +1468,7 @@ void TxnRestDB::execute( const TTradeLookupFrame3Input *pIn,
 
         }
 
+	cout << "Block 2 Done!" << endl;
         osSQL.clear();
         osSQL.str("");
         osSQL << "SELECT th_dts, th_st_id FROM trade_history WHERE th_t_id = ";
@@ -1421,7 +1477,15 @@ void TxnRestDB::execute( const TTradeLookupFrame3Input *pIn,
 
         std::vector<Json::Value *> *thArr = sendQuery( 1, osSQL.str().c_str() );
         for( unsigned j = 0; j < thArr->size(); j++ ) {
-            sscanf( thArr->at(j)->get("th_dts", "").asCString(), "%hd-%hd-%hd %hd:%hd:%hd",
+		time_t t = thArr->at(j)->get( "th_dts", "" ).asInt64() / 1000;
+		struct tm *ti = localtime( &t );
+		char buff[56];
+		memset( buff, '\0', sizeof(buff) );
+		strftime( buff, 56, "%F %T", ti );
+		cout << "Interpreted time: " << buff << endl;
+
+
+            sscanf( buff, "%hd-%hd-%hd %hd:%hd:%hd",
                     &pOut->trade_info[i].trade_history_dts[j].year,
                     &pOut->trade_info[i].trade_history_dts[j].month,
                     &pOut->trade_info[i].trade_history_dts[j].day,
@@ -1432,6 +1496,9 @@ void TxnRestDB::execute( const TTradeLookupFrame3Input *pIn,
                      thArr->at(j)->get("th_st_id", "").asCString(), cTH_ST_ID_len);
             pOut->trade_info[i].trade_history_status_id[j][cTH_ST_ID_len] = '\0';
         }
+	osSQL.clear();
+	osSQL.str("");
+	cout << "Done!" << endl;
     }
 }
 
