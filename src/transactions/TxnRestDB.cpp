@@ -596,15 +596,15 @@ void TxnRestDB::execute( const TDataMaintenanceFrame1Input *pIn ) {
         osSQL.clear();
         osSQL.str("");
         if( rowcount == 0 ) {
-            //TODO: convert getdatetime() to appropriate MySQL call
+            //TODO: convert now() to appropriate MySQL call
             osSQL << "UPDATE exchange SET ex_desc = ex_desc + ";
-            osSQL << "' LAST UPDATED ' + getdatetime()";
+            osSQL << "' LAST UPDATED ' + now()";
             jsonArr = sendQuery( 1, osSQL.str().c_str() );
             //TODO: free jsonArr
         } else {
             //TODO: fix this query on MySQL
             osSQL << "UPDATE exchange SET ex_desc = substring(";
-            osSQL << "ex_desc, 1, len(ex_desc)-len(getdatetime())) + getdatetime()";
+            osSQL << "ex_desc, 1, len(ex_desc)-len(now())) + now()";
             jsonArr = sendQuery( 1, osSQL.str().c_str() );
             //TODO: free jsonArr
         }
@@ -718,24 +718,30 @@ void TxnRestDB::execute( const TMarketFeedFrame1Input *pIn,
     ostringstream osSymbol, osPrice, osQty;
     std::vector<TTradeRequest> vec;
 
-    //All these getdatetime()s are supposed to have the same value.
+    //All these now()s are supposed to have the same value.
     //I'm not sure how much this matters to the spec
     long rows_updated = 0;
     long rows_sent = 0;
+	cout << "max_feed_len: " << max_feed_len << endl;
     for( unsigned int i = 0; i < max_feed_len; i++ ) { 
+	cout << "market_feed iter " << i << endl;
         ostringstream osSQL;
         osSQL << "UPDATE last_trade SET lt_price = ";
         osSQL << pIn->Entries[i].price_quote << ", ";
         osSQL << "lt_vol = lt_vol + " << pIn->Entries[i].trade_qty;
-        osSQL << ", lt_dts = getdatetime() WHERE lt_s_symb = '";
+        osSQL << ", lt_dts = now() WHERE lt_s_symb = '";
         osSQL << pIn->Entries[i].symbol << "'";
         std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
 
+	osSQL.clear();
+	osSQL.str("");
         osSQL << "SELECT count(*) as rows_modified FROM ";
         osSQL << "last_trade WHERE lt_s_symb = '";
         osSQL << pIn->Entries[i].symbol << "'";
         jsonArr = sendQuery( 1, osSQL.str().c_str() );
         //TODO: free jsonArr
+       
+	cout << "After count";
 
         rows_updated += jsonArr->at(0)->get( "rows_modified", "" ).asInt64();
 
@@ -755,15 +761,20 @@ void TxnRestDB::execute( const TMarketFeedFrame1Input *pIn,
         //TODO: free jsonArr
         osSQL.clear();
         osSQL.str("");
+	cout << "market_feed entering second inner loop" << endl;
 
         for( unsigned j = 0; j < jsonArr->size(); j++ ) {
-            osSQL << "UPDATE trade SET t_dts = getdatetime(), ";
+		cout << "market_feed second inner loop running... " << j << endl;
+            osSQL << "UPDATE trade SET t_dts = now(), ";
             osSQL << "t_st_id = '" << pIn->StatusAndTradeType.status_submitted;
             osSQL << "' WHERE t_id = ";
             osSQL << jsonArr->at(j)->get("tr_t_id", "").asInt64();
 
             std::vector<Json::Value *> *arr = sendQuery( 1, osSQL.str().c_str() );
+		cout << "market_feed second inner loop block 1 done" << endl;
             //TODO: free arr
+            osSQL.clear();
+            osSQL.str("");
             osSQL << "DELETE FROM trade_request WHERE tr_t_id = ";
             osSQL << jsonArr->at(j)->get( "tr_t_id", "").asInt64();
             osSQL << " AND tr_bid_price = ";
@@ -776,40 +787,54 @@ void TxnRestDB::execute( const TMarketFeedFrame1Input *pIn,
             osSQL.clear();
             osSQL.str("");
 
+		cout << "market_feed second inner loop block 2 done" << endl;
+
             //TODO: free arr
 
-            osSQL << "INSERT INTO trade_history VALUES ( ";
+            	cout << "Inserting into trade history... " << endl;
+            osSQL << "INSERT INTO trade_history( th_t_id, th_dts, th_st_id ) VALUES ( ";
             osSQL << jsonArr->at(j)->get( "tr_t_id", "").asInt64();
-            osSQL << "," << jsonArr->at(j)->get("tr_bid_price", "").asFloat();
-            osSQL << ", getdatetime()";
+            osSQL << ", now()";
             osSQL << ", '" << pIn->StatusAndTradeType.status_submitted;
             osSQL << "' )";
             arr = sendQuery( 1, osSQL.str().c_str() );
             osSQL.clear();
             osSQL.str("");
             //TODO: free arr
+            //
+		cout << "market_feed second inner loop block 3 done" << endl;
 
             TTradeRequest req;
             req.price_quote = jsonArr->at(j)->get( "tr_bid_price", "" ).asFloat();
-            req.trade_id = jsonArr->at(j)->get( "tr_id", "" ).asInt64();
+		cout << "market_feed price quote" << endl;
+            req.trade_id = jsonArr->at(j)->get( "tr_t_id", "" ).asInt64();
+		cout << "market_feed trade id" << endl;
             req.trade_qty = jsonArr->at(j)->get( "tr_qty", "" ).asInt();
+		cout << "market_feed trade_qty" << endl;
             strncpy( req.symbol, pIn->Entries[i].symbol, cSYMBOL_len );
+		cout << "market_feed symbol" << endl;
             req.symbol[cSYMBOL_len] = '\0';
             strncpy(req.trade_type_id, jsonArr->at(j)->get( "tr_tt_id", "").asCString(), cTT_ID_len);
+		cout << "market_feed trade_type" << endl;
             req.trade_type_id[cTT_ID_len] = '\0';
 
+
             vec.push_back( req );
+		cout << "market_feed iteration "<< j << " Done" << endl;
         }
+	cout << "market_feed finished inner loop for iter: " << i  << endl;
         bool bSent;
         for( unsigned j = 0; j < vec.size(); j++ ) {
             //Send to market
             bSent = pMarketExchange->SendToMarketFromFrame( vec.at(j) );
         }
+	cout << "market_feed done iter " << i << endl;
         rows_sent += vec.size();
 
     }
     pOut->send_len = rows_sent; //Is this right?
     pOut->num_updated = rows_updated; //This is an upper bound, not the exact value
+	cout << "Done market_feed" << endl;
 }
 
 void TxnRestDB::execute( const TMarketWatchFrame1Input *pIn,
@@ -1130,21 +1155,21 @@ void TxnRestDB::execute( const TTradeCleanupFrame1Input *pIn ) {
     std::vector<Json::Value *> *jsonArr = sendQuery( 1, osSQL.str().c_str() );
 
     cout << "Done sending query..." << endl;
-    //All of these getdatetime()'s are the same in the spec,
+    //All of these now()'s are the same in the spec,
     //I'm not sure if it matters tho
     for( unsigned i = 0; i < jsonArr->size(); i++ ) {
         osSQL.clear();
         osSQL.str("");
         osSQL << "INSERT INTO trade_history ( th_t_id, th_dts, th_st_id ) VALUES ";
         osSQL << "( " << jsonArr->at(i)->get("tr_t_id","").asInt64() << ", ";
-        osSQL << "getdatetime(), '" << pIn->st_submitted_id << "')";
+        osSQL << "now(), '" << pIn->st_submitted_id << "')";
         std::vector<Json::Value *> *res = sendQuery( 1, osSQL.str().c_str() );
         //TODO: free res
 
         osSQL.clear();
         osSQL.str("");
         osSQL << "UPDATE trade SET t_st_id = '" << pIn->st_canceled_id << "', ";
-        osSQL << "t_dts = getdatetime() WHERE t_id = " << jsonArr->at(i)->get("tr_t_id","").asInt64();
+        osSQL << "t_dts = now() WHERE t_id = " << jsonArr->at(i)->get("tr_t_id","").asInt64();
         res = sendQuery( 1, osSQL.str().c_str() );
         //TODO: free res
 
@@ -1152,7 +1177,7 @@ void TxnRestDB::execute( const TTradeCleanupFrame1Input *pIn ) {
         osSQL.str("");
         osSQL << "INSERT INTO trade_history ( th_t_id, th_dts, th_st_id ) VALUES ";
         osSQL << "( " << jsonArr->at(i)->get("tr_t_id", "").asInt64() << ", ";
-        osSQL << "getdatetime(), '" << pIn->st_canceled_id << "')";
+        osSQL << "now(), '" << pIn->st_canceled_id << "')";
         res = sendQuery( 1, osSQL.str().c_str() );
         //TODO: free res
     }
@@ -1173,7 +1198,7 @@ void TxnRestDB::execute( const TTradeCleanupFrame1Input *pIn ) {
         osSQL.clear();
         osSQL.str("");
         osSQL << "UPDATE trade SET t_st_id = '" << pIn->st_canceled_id << "', ";
-        osSQL << "t_dts = getdatetime() WHERE t_id = " << jsonArr->at(i)->get("t_id", "").asInt64();
+        osSQL << "t_dts = now() WHERE t_id = " << jsonArr->at(i)->get("t_id", "").asInt64();
         std::vector<Json::Value *> *res  = sendQuery( 1, osSQL.str().c_str() );
         //TODO: free res
 
@@ -1181,7 +1206,7 @@ void TxnRestDB::execute( const TTradeCleanupFrame1Input *pIn ) {
         osSQL.str("");
         osSQL << "INSERT INTO trade_history ( th_t_id, th_dts, th_st_id ) VALUES ";
         osSQL << "( " << jsonArr->at(i)->get("t_id", "").asInt64() << ", ";
-        osSQL << "getdatetime(), '" << pIn->st_canceled_id << "')";
+        osSQL << "now(), '" << pIn->st_canceled_id << "')";
         res  = sendQuery( 1, osSQL.str().c_str() );
         //TODO: free res
     }
@@ -1247,7 +1272,6 @@ void TxnRestDB::execute( const TTradeLookupFrame1Input *pIn,
             osSQL << "ORDER BY th_dts LIMIT 3";
             std::vector<Json::Value *> *thArr = sendQuery( 1, osSQL.str().c_str() );
             for( unsigned j = 0; j < thArr->size(); j++ ) {
-		cout << "Starting loop" << endl;
                 memset( buff, '\0', sizeof(buff) );
                 t = thArr->at(j)->get("th_dts", "").asInt64();
                 ti = localtime( &t );
