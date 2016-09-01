@@ -2281,6 +2281,7 @@ void TxnRestDB::execute( const TTradeResultFrame6Input *pIn,
 
 void TxnRestDB::execute( const TTradeStatusFrame1Input *pIn,
                          TTradeStatusFrame1Output *pOut ) {
+	cout << "Trade_Status frame 1 starting..." << endl;
     ostringstream osSQL;
     osSQL << "SELECT t_id, t_dts, st_name, tt_name, t_s_symb, t_qty, t_exec_name, t_chrg, ";
     osSQL << "s_name, ex_name FROM trade, status_type, trade_type, security, exchange WHERE ";
@@ -2291,7 +2292,12 @@ void TxnRestDB::execute( const TTradeStatusFrame1Input *pIn,
     pOut->num_found = jsonArr->size();
     for( unsigned i = 0; i < jsonArr->size(); i++ ) {
         pOut->trade_id[i] = jsonArr->at(i)->get("t_id", "").asInt64();
-        sscanf(jsonArr->at(i)->get("t_dts", "").asCString(), "%hd-%hd-%hd %hd:%hd:%hd",
+        time_t t = jsonArr->at(i)->get( "t_dts", "" ).asInt64() / 1000;
+        struct tm *ti = localtime( &t );
+        char buff[56];
+        strftime( buff, 56, "%F %T", ti );
+ 
+        sscanf(buff, "%hd-%hd-%hd %hd:%hd:%hd",
                 &pOut->trade_dts[i].year,
                 &pOut->trade_dts[i].month,
                 &pOut->trade_dts[i].day,
@@ -2319,12 +2325,13 @@ void TxnRestDB::execute( const TTradeStatusFrame1Input *pIn,
     osSQL << "SELECT c_l_name, c_f_name, b_name FROM customer_account, customer, broker ";
     osSQL << "WHERE ca_id = " << pIn->acct_id << " AND c_id = ca_c_id AND b_id = ca_b_id";
     std::vector<Json::Value *> *cArr = sendQuery( 1, osSQL.str().c_str() );
-    strncpy(pOut->cust_f_name, cArr->at(0)->get( "cust_f_name", "" ).asCString(), cF_NAME_len);
+    strncpy(pOut->cust_f_name, cArr->at(0)->get( "c_f_name", "" ).asCString(), cF_NAME_len);
     pOut->cust_f_name[cF_NAME_len] = '\0';
-    strncpy(pOut->cust_l_name, cArr->at(0)->get( "cust_l_name", "" ).asCString(), cL_NAME_len);
+    strncpy(pOut->cust_l_name, cArr->at(0)->get( "c_l_name", "" ).asCString(), cL_NAME_len);
     pOut->cust_l_name[cL_NAME_len] = '\0';
     strncpy(pOut->broker_name, jsonArr->at(0)->get( "b_name", "" ).asCString(), cB_NAME_len);
     pOut->broker_name[cB_NAME_len] = '\0';
+	cout << "Trade_Status Frame 1 Done" << endl;
 }
 
 void TxnRestDB::execute( const TTradeUpdateFrame1Input *pIn,
