@@ -1968,7 +1968,7 @@ void TxnRestDB::execute( const TTradeResultFrame2Input *pIn,
         if( pIn->hs_qty == 0 ) {
             osSQL.clear();
             osSQL.str("");
-            osSQL << "INSERT INTO holding_summary ( hs_ca_id, hs_s_symb ";
+            osSQL << "INSERT INTO holding_summary ( hs_ca_id, hs_s_symb, ";
             osSQL << "hs_qty ) VALUES ( " << pIn->acct_id << ", '";
             osSQL << pIn->symbol << "', -" << pIn->trade_qty << ")";
             std::vector<Json::Value *> *res = sendQuery( 1, osSQL.str().c_str() );
@@ -2640,9 +2640,12 @@ void TxnRestDB::execute( const TTradeUpdateFrame3Input *pIn,
 	cout << "Trade_Update Frame 3 outside first loop..." << endl;
     for( unsigned i = 0; i < jsonArr->size(); i++ ) {
 	cout << "Trade_Update Frame 3 first loop iter " << i  << endl;
-        pOut->trade_info[i].acct_id = jsonArr->at(i)->get("t_ca_id", "").asInt();
-        strncpy( pOut->trade_info[i].exec_name, jsonArr->at(i)->get("t_exec_name", "").asCString(),
-                 cEXEC_NAME_len );
+	cout << "Trade_Update Frame 3 before t_ca_id" << endl;
+        pOut->trade_info[i].acct_id = jsonArr->at(i)->get("t_ca_id", "").asInt64();
+	cout << "Trade_Update Frame 3 t_ca_id" << endl;
+	cout << "t_exec_name is string: " << jsonArr->at(i)->get("t_exec_name", "").isString() << endl;
+	cout << "t_exec_name: " << jsonArr->at(i)->get("t_exec_name", "") << endl;
+        strncpy( pOut->trade_info[i].exec_name, jsonArr->at(i)->get("t_exec_name", "").asCString(), cEXEC_NAME_len );
 	cout << "Trade_Update Frame 3 before is_cash" << endl;
 	bool is_cash = jsonArr->at(i)->get("t_is_cash", "").asBool();
 	pOut->trade_info[i].is_cash = is_cash ? 1 : 0 ;
@@ -2678,18 +2681,18 @@ void TxnRestDB::execute( const TTradeUpdateFrame3Input *pIn,
 	cout << "Trade_Update Frame 3 done first loop..." << endl;
 
     for( unsigned i = 0; i < jsonArr->size(); i++ ) {
-	cout << "Trade_Update Frame 3 in second loop" << i << endl;
+	cout << "Trade_Update Frame 3 in second loop " << i << endl;
         osSQL.clear();
         osSQL.str("");
-        osSQL << "SELECT se_amt, se_cash_due_date, se_cash_type FROM settlement se_t_id = ";
+        osSQL << "SELECT se_amt, se_cash_due_date, se_cash_type FROM settlement WHERE se_t_id = ";
         osSQL << pOut->trade_info[i].trade_id;
         std::vector<Json::Value *> *seArr = sendQuery( 1, osSQL.str().c_str() );
         pOut->trade_info[i].settlement_amount = seArr->at(0)->get("se_amt", "").asDouble();
-        sscanf( seArr->at(i)->get("se_cash_due_date", "").asCString(), "%hd-%hd-%hd %hd:%hd:%hd",
+        sscanf( seArr->at(0)->get("se_cash_due_date", "").asCString(), "%hd-%hd-%hd",
                 &pOut->trade_info[i].settlement_cash_due_date.year,
                 &pOut->trade_info[i].settlement_cash_due_date.month,
                 &pOut->trade_info[i].settlement_cash_due_date.day);
-        strncpy( pOut->trade_info[i].settlement_cash_type, seArr->at(i)->get("se_cash_type", "").asCString(),
+        strncpy( pOut->trade_info[i].settlement_cash_type, seArr->at(0)->get("se_cash_type", "").asCString(),
                  cSE_CASH_TYPE_len );
 	cout << "Trade_Update Frame 3 done with se" << endl;
         if( pOut->trade_info[i].is_cash ) {
