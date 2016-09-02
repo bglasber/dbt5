@@ -2229,7 +2229,7 @@ void TxnRestDB::execute( const TTradeResultFrame4Input *pIn,
     osSQL.clear();
     osSQL.str("");
     osSQL << "SELECT cr_rate FROM commission_rate WHERE cr_c_tier = ";
-    osSQL << cArr->at(0)->get("c_tier", "").asInt() << "AND  cr_tt_id = '";
+    osSQL << cArr->at(0)->get("c_tier", "").asInt() << " AND cr_tt_id = '";
     osSQL << pIn->type_id << "' AND cr_ex_id = '" << jsonArr->at(0)->get("s_ex_id", "").asString();
     osSQL << "' AND cr_from_qty <= " << pIn->trade_qty << " AND cr_to_qty >= " << pIn->trade_qty;
     osSQL << " LIMIT 1";
