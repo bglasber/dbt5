@@ -166,13 +166,13 @@ size_t write_callback( char *ptr, size_t size, size_t nmemb, void *userdata ) {
 }
 
 std::vector<Json::Value *> *TxnRestDB::sendQuery( int clientId, string query ){
-    cout << "Sending Query to " << REST_QUERY_URL << endl;
     CURLcode res;
     char url[64];
     char buff[2048];	
     ostringstream os;
     curl = curl_easy_init();
     snprintf( url, 64, REST_QUERY_URL, clientId );
+    cout << "Sending query to: " << url << endl;
     curl_easy_setopt( curl, CURLOPT_URL, url );
     struct curl_slist *chunk = NULL;
     chunk = curl_slist_append(chunk, "Content-Type: application/json");

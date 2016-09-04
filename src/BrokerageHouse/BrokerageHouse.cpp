@@ -106,6 +106,7 @@ void *workerThread(void *data)
 				//  Parse Txn type
 				switch (pMessage->TxnType) {
 				case BROKER_VOLUME:
+					std::cout << "Broker Volume transaction for cid: " << clientId << std::endl;
 					pThrParam->pBrokerageHouse->logErrorMessage("broker volume transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunBrokerVolume(
 							&(pMessage->TxnInput.BrokerVolumeTxnInput),
@@ -113,6 +114,7 @@ void *workerThread(void *data)
 					pThrParam->pBrokerageHouse->logErrorMessage("broker volume transaction done...\n");
 					break;
 				case CUSTOMER_POSITION:
+					std::cout << "Customer Position transaction for cid: " << clientId << std::endl;
 					pThrParam->pBrokerageHouse->logErrorMessage("customer_position transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunCustomerPosition(
 							&(pMessage->TxnInput.CustomerPositionTxnInput),
@@ -120,12 +122,14 @@ void *workerThread(void *data)
 					pThrParam->pBrokerageHouse->logErrorMessage("customer_position transaction done...\n");
 					break;
 				case MARKET_FEED:
+					std::cout << "Market Feed transaction for cid: " << clientId << std::endl;
 					pThrParam->pBrokerageHouse->logErrorMessage("market_feed transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunMarketFeed(
 							&(pMessage->TxnInput.MarketFeedTxnInput), marketFeed, clientId);
 					pThrParam->pBrokerageHouse->logErrorMessage("market_feed transaction done...\n");
 					break;
 				case MARKET_WATCH:
+					std::cout << "Market Watch transaction for cid: " << clientId << std::endl;
 					pThrParam->pBrokerageHouse->logErrorMessage("market_watch transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunMarketWatch(
 							&(pMessage->TxnInput.MarketWatchTxnInput), marketWatch, clientId);
@@ -133,6 +137,7 @@ void *workerThread(void *data)
 					pThrParam->pBrokerageHouse->logErrorMessage("market_watch transaction done...\n");
 					break;
 				case SECURITY_DETAIL:
+					std::cout << "Security Detail transaction for cid: " << clientId << std::endl;
 					pThrParam->pBrokerageHouse->logErrorMessage("security_detail transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunSecurityDetail(
 							&(pMessage->TxnInput.SecurityDetailTxnInput),
@@ -140,24 +145,28 @@ void *workerThread(void *data)
 					pThrParam->pBrokerageHouse->logErrorMessage("security_detail transaction done...\n");
 					break;
 				case TRADE_LOOKUP:
+					std::cout << "Trade Lookup transaction for cid: " << clientId << std::endl;
 					pThrParam->pBrokerageHouse->logErrorMessage("trade_lookup transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunTradeLookup(
 							&(pMessage->TxnInput.TradeLookupTxnInput), tradeLookup, clientId);
 					pThrParam->pBrokerageHouse->logErrorMessage("trade_lookup transaction done...\n");
 					break;
 				case TRADE_ORDER:
+					std::cout << "Trade Order transaction for cid: " << clientId << std::endl;
 					pThrParam->pBrokerageHouse->logErrorMessage("trade_order transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunTradeOrder(
 							&(pMessage->TxnInput.TradeOrderTxnInput), tradeOrder, clientId);
 					pThrParam->pBrokerageHouse->logErrorMessage("trade_order transaction done...\n");
 					break;
 				case TRADE_RESULT:
+					std::cout << "Trade Result transaction for cid: " << clientId << std::endl;
 					pThrParam->pBrokerageHouse->logErrorMessage("trade_result transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunTradeResult(
 							&(pMessage->TxnInput.TradeResultTxnInput), tradeResult, clientId);
 					pThrParam->pBrokerageHouse->logErrorMessage("trade_result transaction done...\n");
 					break;
 				case TRADE_STATUS:
+					std::cout << "Trade Status transaction for cid: " << clientId << std::endl;
 					pThrParam->pBrokerageHouse->logErrorMessage("trade_status transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunTradeStatus(
 							&(pMessage->TxnInput.TradeStatusTxnInput),
@@ -165,12 +174,14 @@ void *workerThread(void *data)
 					pThrParam->pBrokerageHouse->logErrorMessage("trade_status transaction done...\n");
 					break;
 				case TRADE_UPDATE:
+					std::cout << "Trade Update transaction for cid: " << clientId << std::endl;
 					pThrParam->pBrokerageHouse->logErrorMessage("trade_update transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunTradeUpdate(
 							&(pMessage->TxnInput.TradeUpdateTxnInput), tradeUpdate, clientId);
 					pThrParam->pBrokerageHouse->logErrorMessage("trade_update transaction done...\n");
 					break;
 				case DATA_MAINTENANCE:
+					std::cout << "Data Maintenance transaction for cid: " << clientId << std::endl;
 					pThrParam->pBrokerageHouse->logErrorMessage("data_maintenance transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunDataMaintenance(
 							&(pMessage->TxnInput.DataMaintenanceTxnInput),
@@ -178,7 +189,7 @@ void *workerThread(void *data)
 					pThrParam->pBrokerageHouse->logErrorMessage("data_maintenance transaction done...\n");
 					break;
 				case TRADE_CLEANUP:
-
+					std::cout << "Trade Cleanup transaction for cid: " << clientId << std::endl;
 					pThrParam->pBrokerageHouse->logErrorMessage("trade_cleanup transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunTradeCleanup(
 							&(pMessage->TxnInput.TradeCleanupTxnInput),
