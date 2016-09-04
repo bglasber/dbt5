@@ -94,7 +94,8 @@ void *customerWorkerThread(void *data)
 			pThrParam->pDriver->iPacingDelay,
 			pThrParam->pDriver->outputDirectory,
 			&pThrParam->pDriver->m_fMix,
-			&pThrParam->pDriver->m_MixLock);
+			&pThrParam->pDriver->m_MixLock,
+			pThrParam->clientId);
 	do {
 		customer->DoTxn();
 
@@ -208,6 +209,7 @@ void CDriver::runTest(int iSleep, int iTestDuration)
 		// zero the structure
 		memset(pThrParam, 0, sizeof(TCustomerThreadParam));
 		pThrParam->pDriver = this;
+		pThrParam->clientId = i;
 
 		entryCustomerWorkerThread(reinterpret_cast<void *>(pThrParam), i);
 
@@ -277,6 +279,7 @@ void entryDMWorkerThread(CDriver *ptr)
 	PCustomerThreadParam pThrParam = new TCustomerThreadParam;
 	memset(pThrParam, 0, sizeof(TCustomerThreadParam)); // zero the structure
 	pThrParam->pDriver = ptr;
+	pThrParam->clientId = 0;
 
 	pthread_attr_t threadAttribute; // thread attribute
 

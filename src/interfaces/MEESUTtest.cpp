@@ -36,7 +36,7 @@ void *TradeResultAsync(void* data)
 	TTradeResultTxnOutput	m_TradeResultTxnOutput;
 	
 	// Perform Trade Result
-	m_TradeResult.DoTxn(&(pCMEESUTtest->m_TradeResultTxnInput),
+	m_TradeResult.DoTxn(1, &(pCMEESUTtest->m_TradeResultTxnInput),
 			&m_TradeResultTxnOutput);
 
 	delete m_pConn;
@@ -110,7 +110,7 @@ void *MarketFeedAsync(void* data)
 	TMarketFeedTxnOutput	m_MarketFeedTxnOutput;
 	
 	// Perform Market Feed
-	m_MarketFeed.DoTxn( &(pCMEESUTtest->m_MarketFeedTxnInput),
+	m_MarketFeed.DoTxn( 1, &(pCMEESUTtest->m_MarketFeedTxnInput),
 			&m_MarketFeedTxnOutput);
 
 	delete m_pConn;

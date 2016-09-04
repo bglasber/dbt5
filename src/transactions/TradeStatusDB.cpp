@@ -11,7 +11,9 @@
 #include "TradeStatusDB.h"
 
 // Call Trade Status Frame 1
-void CTradeStatusDB::DoTradeStatusFrame1(const TTradeStatusFrame1Input *pIn,
+void CTradeStatusDB::DoTradeStatusFrame1(
+		int clientId,
+		const TTradeStatusFrame1Input *pIn,
 		TTradeStatusFrame1Output *pOut)
 {
 #ifdef DEBUG
@@ -24,7 +26,7 @@ void CTradeStatusDB::DoTradeStatusFrame1(const TTradeStatusFrame1Input *pIn,
 	startTransaction();
 	// Isolation level required by Clause 7.4.1.3
 	setReadCommitted();
-	execute(pIn, pOut);
+	execute(clientId, pIn, pOut);
 	commitTransaction();
 
 #ifdef DEBUG

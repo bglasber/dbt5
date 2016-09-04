@@ -23,7 +23,7 @@ class CCESUT : public CCESUTInterface, public CBaseInterface
 public:
 
 	CCESUT(char* addr, const int iListenPort, ofstream* pflog, ofstream* pfmix,
-			CMutex* pLogLock, CMutex* pMixLock);
+			CMutex* pLogLock, CMutex* pMixLock, int clientId);
 	~CCESUT(void);
 
 	// return whether it was successful
@@ -47,6 +47,7 @@ public:
 private:
 
 	struct TMsgDriverBrokerage request;
+	int clientId;
 };
 
 #endif	// CE_SUT_H

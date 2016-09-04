@@ -29,6 +29,7 @@ class CCustomer
 	CCE * m_pCCE;
 	PDriverCETxnSettings m_pDriverCETxnSettings;
 	CMutex m_LogLock;
+	int clientId;
 	ofstream m_fLog; // error log file
 
 private:
@@ -45,7 +46,8 @@ public:
 			TIdent iActiveCustomerCount, INT32 iScaleFactor,
 			INT32 iDaysOfInitialTrades, UINT32 UniqueId, char *szBHaddr,
 			int iBHlistenPort, int iUsers, int iPacingDelay,
-			char *outputDirectory, ofstream *m_fMix, CMutex *m_MixLock);
+			char *outputDirectory, ofstream *m_fMix, CMutex *m_MixLock,
+			int clientId);
 	~CCustomer();
 
 	void DoTxn();

@@ -52,7 +52,7 @@ public:
     {
     };
 
-    void DoTxn(PMarketWatchTxnInput pTxnInput, PMarketWatchTxnOutput pTxnOutput)
+    void DoTxn( int clientId, PMarketWatchTxnInput pTxnInput, PMarketWatchTxnOutput pTxnOutput)
     {
         TXN_HARNESS_SET_STATUS_SUCCESS;
 
@@ -65,7 +65,7 @@ public:
             memset(&Frame1Output, 0, sizeof(Frame1Output));
 
             // Execute Frame 1
-            m_db->DoMarketWatchFrame1(pTxnInput, &Frame1Output);
+            m_db->DoMarketWatchFrame1(clientId, pTxnInput, &Frame1Output);
 
             // Copy Frame 1 Output
             pTxnOutput->pct_change = Frame1Output.pct_change;

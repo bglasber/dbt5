@@ -52,7 +52,7 @@ public:
     {
     }
 
-    void DoTxn( PTradeStatusTxnInput pTxnInput, PTradeStatusTxnOutput pTxnOutput)
+    void DoTxn( int clientId, PTradeStatusTxnInput pTxnInput, PTradeStatusTxnOutput pTxnOutput)
     {
         // Initialization 
         TTradeStatusFrame1Output    Frame1Output;
@@ -61,7 +61,7 @@ public:
         TXN_HARNESS_SET_STATUS_SUCCESS;
 
         // Execute Frame 1
-        m_db->DoTradeStatusFrame1(pTxnInput, &Frame1Output);
+        m_db->DoTradeStatusFrame1(clientId, pTxnInput, &Frame1Output);
 
         // Validate Frame 1 Output
         if (Frame1Output.num_found != max_trade_status_len)

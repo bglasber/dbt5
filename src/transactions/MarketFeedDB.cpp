@@ -13,6 +13,7 @@
 
 // Call Market Feed Frame 1
 void CMarketFeedDB::DoMarketFeedFrame1(
+		int clientId,
 		const TMarketFeedFrame1Input *pIn, TMarketFeedFrame1Output *pOut,
 		CSendToMarketInterface *pMarketExchange)
 {
@@ -34,7 +35,7 @@ void CMarketFeedDB::DoMarketFeedFrame1(
 	startTransaction();
 	// Isolation level required by Clause 7.4.1.3
 	setRepeatableRead();
-	execute(pIn, pOut, pMarketExchange);
+	execute(clientId, pIn, pOut, pMarketExchange);
 	commitTransaction();
 	
 #ifdef DEBUG

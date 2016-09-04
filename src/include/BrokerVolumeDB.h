@@ -23,7 +23,7 @@ class CBrokerVolumeDB : public TxnRestDB, public CBrokerVolumeDBInterface
         CBrokerVolumeDB(CDBConnection *pDBConn) : TxnRestDB() {};
         ~CBrokerVolumeDB() {};
 
-        virtual void DoBrokerVolumeFrame1(const TBrokerVolumeFrame1Input *pIn,
+        virtual void DoBrokerVolumeFrame1(int clientId, const TBrokerVolumeFrame1Input *pIn,
                 TBrokerVolumeFrame1Output *pOut);
 
         // Function to pass any exception thrown inside

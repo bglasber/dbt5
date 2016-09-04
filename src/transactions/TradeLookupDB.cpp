@@ -11,7 +11,9 @@
 #include "TradeLookupDB.h"
 
 // Call Trade Lookup Frame 1
-void CTradeLookupDB::DoTradeLookupFrame1(const TTradeLookupFrame1Input *pIn,
+void CTradeLookupDB::DoTradeLookupFrame1(
+		int clientId,
+		const TTradeLookupFrame1Input *pIn,
 		TTradeLookupFrame1Output *pOut)
 {
 #ifdef DEBUG
@@ -27,7 +29,7 @@ void CTradeLookupDB::DoTradeLookupFrame1(const TTradeLookupFrame1Input *pIn,
 	startTransaction();
 	// Isolation level required by Clause 7.4.1.3
 	setReadCommitted();
-	execute(pIn, pOut);
+	execute(clientId, pIn, pOut);
 	commitTransaction();
 
 #ifdef DEBUG
@@ -115,7 +117,9 @@ void CTradeLookupDB::DoTradeLookupFrame1(const TTradeLookupFrame1Input *pIn,
 }
 
 // Call Trade Lookup Frame 2
-void CTradeLookupDB::DoTradeLookupFrame2(const TTradeLookupFrame2Input *pIn,
+void CTradeLookupDB::DoTradeLookupFrame2(
+		int clientId,
+		const TTradeLookupFrame2Input *pIn,
 		TTradeLookupFrame2Output *pOut)
 {
 #ifdef DEBUG
@@ -135,7 +139,7 @@ void CTradeLookupDB::DoTradeLookupFrame2(const TTradeLookupFrame2Input *pIn,
 	startTransaction();
 	// Isolation level required by Clause 7.4.1.3
 	setReadCommitted();
-	execute(pIn, pOut);
+	execute(clientId, pIn, pOut);
 	commitTransaction();
 
 #ifdef DEBUG
@@ -223,7 +227,9 @@ void CTradeLookupDB::DoTradeLookupFrame2(const TTradeLookupFrame2Input *pIn,
 }
 
 // Call Trade Lookup Frame 3
-void CTradeLookupDB::DoTradeLookupFrame3(const TTradeLookupFrame3Input *pIn,
+void CTradeLookupDB::DoTradeLookupFrame3(
+		int clientId,
+		const TTradeLookupFrame3Input *pIn,
 		TTradeLookupFrame3Output *pOut)
 {
 #ifdef DEBUG
@@ -244,7 +250,7 @@ void CTradeLookupDB::DoTradeLookupFrame3(const TTradeLookupFrame3Input *pIn,
 	startTransaction();
 	// Isolation level required by Clause 7.4.1.3
 	setReadCommitted();
-	execute(pIn, pOut);
+	execute(clientId, pIn, pOut);
 	commitTransaction();
 
 #ifdef DEBUG
@@ -346,7 +352,9 @@ void CTradeLookupDB::DoTradeLookupFrame3(const TTradeLookupFrame3Input *pIn,
 }
 
 // Call Trade Lookup Frame 4
-void CTradeLookupDB::DoTradeLookupFrame4(const TTradeLookupFrame4Input *pIn,
+void CTradeLookupDB::DoTradeLookupFrame4(
+		int clientId,
+		const TTradeLookupFrame4Input *pIn,
 		TTradeLookupFrame4Output *pOut)
 {
 #ifdef DEBUG
@@ -364,7 +372,7 @@ void CTradeLookupDB::DoTradeLookupFrame4(const TTradeLookupFrame4Input *pIn,
 	startTransaction();
 	// Isolation level required by Clause 7.4.1.3
 	setReadCommitted();
-	execute(pIn, pOut);
+	execute(clientId, pIn, pOut);
 	commitTransaction();
 
 #ifdef DEBUG

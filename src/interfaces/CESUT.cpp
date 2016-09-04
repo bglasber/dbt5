@@ -11,9 +11,11 @@
 
 // Constructor
 CCESUT::CCESUT(char* addr, const int iListenPort, ofstream* pflog,
-		ofstream* pfmix, CMutex* pLogLock, CMutex* pMixLock)
+		ofstream* pfmix, CMutex* pLogLock, CMutex* pMixLock,
+		int clientId)
 : CBaseInterface(addr, iListenPort, pflog, pfmix, pLogLock, pMixLock)
 {
+	this->clientId = clientId;
 }
 
 // Destructor
@@ -30,7 +32,7 @@ bool CCESUT::BrokerVolume(PBrokerVolumeTxnInput pTxnInput)
 	memcpy(&(request.TxnInput.BrokerVolumeTxnInput), pTxnInput,
 			sizeof(request.TxnInput.BrokerVolumeTxnInput));
 	
-	return talkToSUT(&request);
+	return talkToSUT(clientId, &request);
 }
 
 // Customer Position
@@ -42,7 +44,7 @@ bool CCESUT::CustomerPosition(PCustomerPositionTxnInput pTxnInput)
 	memcpy(&(request.TxnInput.CustomerPositionTxnInput), pTxnInput,
 			sizeof(request.TxnInput.CustomerPositionTxnInput));
 	
-	return talkToSUT(&request);
+	return talkToSUT(clientId, &request);
 }
 
 // Market Watch
@@ -54,7 +56,7 @@ bool CCESUT::MarketWatch(PMarketWatchTxnInput pTxnInput)
 	memcpy(&(request.TxnInput.MarketWatchTxnInput), pTxnInput,
 			sizeof(request.TxnInput.MarketWatchTxnInput));
 	
-	return talkToSUT(&request);
+	return talkToSUT(clientId, &request);
 }
 
 // Security Detail
@@ -66,7 +68,7 @@ bool CCESUT::SecurityDetail(PSecurityDetailTxnInput pTxnInput)
 	memcpy(&(request.TxnInput.SecurityDetailTxnInput), pTxnInput,
 			sizeof(request.TxnInput.SecurityDetailTxnInput));
 	
-	return talkToSUT(&request);
+	return talkToSUT(clientId, &request);
 }
 
 // Trade Lookup
@@ -78,7 +80,7 @@ bool CCESUT::TradeLookup(PTradeLookupTxnInput pTxnInput)
 	memcpy(&(request.TxnInput.TradeLookupTxnInput), pTxnInput,
 			sizeof(request.TxnInput.TradeLookupTxnInput));
 	
-	return talkToSUT(&request);
+	return talkToSUT(clientId, &request);
 }
 
 // Trade Status
@@ -90,7 +92,7 @@ bool CCESUT::TradeStatus(PTradeStatusTxnInput pTxnInput)
 	memcpy(&(request.TxnInput.TradeStatusTxnInput), pTxnInput,
 			sizeof(request.TxnInput.TradeStatusTxnInput));
 	
-	return talkToSUT(&request);
+	return talkToSUT(clientId, &request);
 }
 
 // Trade Order
@@ -103,7 +105,7 @@ bool CCESUT::TradeOrder(PTradeOrderTxnInput pTxnInput, INT32 iTradeType,
 	memcpy(&(request.TxnInput.TradeOrderTxnInput), pTxnInput,
 			sizeof(request.TxnInput.TradeOrderTxnInput));
 	
-	return talkToSUT(&request);
+	return talkToSUT(clientId, &request);
 }
 
 // Trade Update
@@ -115,5 +117,5 @@ bool CCESUT::TradeUpdate(PTradeUpdateTxnInput pTxnInput)
 	memcpy(&(request.TxnInput.TradeUpdateTxnInput), pTxnInput,
 			sizeof(request.TxnInput.TradeUpdateTxnInput));
 	
-	return talkToSUT(&request);
+	return talkToSUT(clientId, &request);
 }

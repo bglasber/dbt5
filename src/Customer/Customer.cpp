@@ -17,9 +17,11 @@ CCustomer::CCustomer(char *szInDir,
 		TIdent iConfiguredCustomerCount, TIdent iActiveCustomerCount,
 		INT32 iScaleFactor, INT32 iDaysOfInitialTrades, UINT32 iSeed,
 		char *szBHaddr, int iBHlistenPort, int iUsers, int iPacingDelay,
-		char *outputDirectory, ofstream *m_fMix, CMutex *m_MixLock)
+		char *outputDirectory, ofstream *m_fMix, CMutex *m_MixLock,
+		int clientId )
 : m_iUsers(iUsers), m_iPacingDelay(iPacingDelay)
 {
+	this->clientId = clientId;
 	char filename[iMaxPath + 1];
 	snprintf(filename, iMaxPath, "%s/Customer_%lld.log", outputDirectory,
 			(long long) pthread_self());
@@ -34,7 +36,7 @@ CCustomer::CCustomer(char *szInDir,
 
 	// initialize CESUT interface
 	m_pCCESUT = new CCESUT(szBHaddr, iBHlistenPort, &m_fLog, m_fMix,
-			&m_LogLock, m_MixLock);
+			&m_LogLock, m_MixLock, clientId );
 
 	// initialize CE - Customer Emulator
 	if (iSeed == 0) {

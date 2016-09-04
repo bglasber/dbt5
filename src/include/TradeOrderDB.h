@@ -24,16 +24,24 @@ class CTradeOrderDB : public TxnRestDB, public CTradeOrderDBInterface
         CTradeOrderDB(CDBConnection *pDBConn) : TxnRestDB() {};
         ~CTradeOrderDB() {};
 
-        virtual void DoTradeOrderFrame1(const TTradeOrderFrame1Input *pIn,
+        virtual void DoTradeOrderFrame1(
+		int clientId,
+		const TTradeOrderFrame1Input *pIn,
                 TTradeOrderFrame1Output *pOut);
-        virtual void DoTradeOrderFrame2(const TTradeOrderFrame2Input *pIn,
+        virtual void DoTradeOrderFrame2(
+		int clientId,
+		const TTradeOrderFrame2Input *pIn,
                 TTradeOrderFrame2Output *pOut);
-        virtual void DoTradeOrderFrame3(const TTradeOrderFrame3Input *pIn,
+        virtual void DoTradeOrderFrame3(
+		int clientId,
+		const TTradeOrderFrame3Input *pIn,
                 TTradeOrderFrame3Output *pOut);
-        virtual void DoTradeOrderFrame4(const TTradeOrderFrame4Input *pIn,
+        virtual void DoTradeOrderFrame4(
+		int clientId,
+		const TTradeOrderFrame4Input *pIn,
                 TTradeOrderFrame4Output *pOut);
-        virtual void DoTradeOrderFrame5();
-        virtual void DoTradeOrderFrame6();
+        virtual void DoTradeOrderFrame5(int clientId);
+        virtual void DoTradeOrderFrame6(int clientId);
 
         // Function to pass any exception thrown inside
         // database class frame implementation

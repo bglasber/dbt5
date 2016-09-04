@@ -56,7 +56,7 @@ public:
     {
     };
 
-    void DoTxn( PTradeResultTxnInput pTxnInput, PTradeResultTxnOutput pTxnOutput )
+    void DoTxn( int clientId, PTradeResultTxnInput pTxnInput, PTradeResultTxnOutput pTxnOutput )
     {
         // Initialization
         TTradeResultFrame1Input     Frame1Input;
@@ -97,7 +97,7 @@ public:
         Frame1Input.trade_id = pTxnInput->trade_id;
 
         // Execute Frame 1
-        m_db->DoTradeResultFrame1(&Frame1Input, &Frame1Output);
+        m_db->DoTradeResultFrame1(clientId, &Frame1Input, &Frame1Output);
 
         // Validate Frame 1 Output
         if (Frame1Output.num_found != 1)
@@ -120,7 +120,7 @@ public:
         Frame2Input.type_is_sell = Frame1Output.type_is_sell;
 
         // Execute Frame 2
-        m_db->DoTradeResultFrame2(&Frame2Input, &Frame2Output);
+        m_db->DoTradeResultFrame2(clientId,&Frame2Input, &Frame2Output);
 
         //
         // FRAME 3
@@ -137,7 +137,7 @@ public:
             Frame3Input.trade_id = pTxnInput->trade_id;
 
             // Execute Frame 3
-            m_db->DoTradeResultFrame3(&Frame3Input, &Frame3Output);
+            m_db->DoTradeResultFrame3(clientId,&Frame3Input, &Frame3Output);
 
             // Validate Frame 3 Output
             if (Frame3Output.tax_amount < 0.00)
@@ -157,7 +157,7 @@ public:
         strncpy(Frame4Input.type_id, Frame1Output.type_id, sizeof(Frame4Input.type_id));
 
         // Execute Frame 4
-        m_db->DoTradeResultFrame4(&Frame4Input, &Frame4Output);
+        m_db->DoTradeResultFrame4(clientId, &Frame4Input, &Frame4Output);
 
         // Validate Frame 4 Output
         if (Frame4Output.comm_rate <= 0.0000)
@@ -181,7 +181,7 @@ public:
         Frame5Input.trade_price = pTxnInput->trade_price;
 
         // Execute Frame 5
-        m_db->DoTradeResultFrame5(&Frame5Input);
+        m_db->DoTradeResultFrame5(clientId,&Frame5Input);
 
         //
         // FRAME 6
@@ -222,7 +222,7 @@ public:
         strncpy(Frame6Input.type_name, Frame1Output.type_name, sizeof(Frame6Input.type_name));
 
         // Execute Frame 6
-        m_db->DoTradeResultFrame6(&Frame6Input, &Frame6Output);
+        m_db->DoTradeResultFrame6(clientId,&Frame6Input, &Frame6Output);
 
         // Copy Frame 6 Output
         pTxnOutput->acct_id = Frame1Output.acct_id;

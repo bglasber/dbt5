@@ -12,6 +12,7 @@
 
 // Call Security Detail Frame 1
 void CSecurityDetailDB::DoSecurityDetailFrame1(
+		int clientId,
 		const TSecurityDetailFrame1Input *pIn,
 		TSecurityDetailFrame1Output *pOut)
 {
@@ -32,7 +33,7 @@ void CSecurityDetailDB::DoSecurityDetailFrame1(
 	startTransaction();
 	// Isolation level required by Clause 7.4.1.3
 	setReadCommitted();
-	execute(pIn, pOut);
+	execute(clientId, pIn, pOut);
 	commitTransaction();
 
 #ifdef DEBUG

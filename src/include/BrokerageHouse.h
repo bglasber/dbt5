@@ -62,29 +62,29 @@ private:
 	void dumpInputData(PTradeUpdateTxnInput);
 
 	INT32 RunBrokerVolume(PBrokerVolumeTxnInput pTxnInput,
-			CBrokerVolume &BrokerVolume);
+			CBrokerVolume &BrokerVolume, int clientId);
 	INT32 RunCustomerPosition(PCustomerPositionTxnInput pTxnInput,
-			CCustomerPosition &CustomerPosition);
+			CCustomerPosition &CustomerPosition, int clientId);
 	INT32 RunDataMaintenance(PDataMaintenanceTxnInput pTxnInput,
-			CDataMaintenance &DataMaintenance);
+			CDataMaintenance &DataMaintenance, int clientId);
 	INT32 RunTradeCleanup(PTradeCleanupTxnInput pTxnInput,
-			CTradeCleanup &TradeCleanup);
+			CTradeCleanup &TradeCleanup, int clientId);
 	INT32 RunMarketWatch(PMarketWatchTxnInput pTxnInput,
-			CMarketWatch &MarketWatch);
+			CMarketWatch &MarketWatch, int clientId);
 	INT32 RunMarketFeed(PMarketFeedTxnInput pTxnInput,
-			CMarketFeed &MarketFeed);
+			CMarketFeed &MarketFeed, int clientId);
 	INT32 RunSecurityDetail(PSecurityDetailTxnInput pTxnInput,
-			CSecurityDetail &SecurityDetail);
+			CSecurityDetail &SecurityDetail, int clientId);
 	INT32 RunTradeStatus(PTradeStatusTxnInput pTxnInput,
-			CTradeStatus &TradeStatus);
+			CTradeStatus &TradeStatus, int clientId);
 	INT32 RunTradeLookup(PTradeLookupTxnInput pTxnInput,
-			CTradeLookup &TradeLookup);
+			CTradeLookup &TradeLookup, int clientId);
 	INT32 RunTradeOrder(PTradeOrderTxnInput pTxnInput,
-			CTradeOrder &TradeOrder);
+			CTradeOrder &TradeOrder, int clientId);
 	INT32 RunTradeResult(PTradeResultTxnInput pTxnInput,
-			CTradeResult &TradeResult);
+			CTradeResult &TradeResult, int clientId);
 	INT32 RunTradeUpdate(PTradeUpdateTxnInput pTxnInput,
-			CTradeUpdate &TradeUpdate);
+			CTradeUpdate &TradeUpdate, int clientId);
 
 	friend void *workerThread(void *);
 

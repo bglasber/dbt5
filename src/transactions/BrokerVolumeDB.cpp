@@ -11,7 +11,7 @@
 #include "BrokerVolumeDB.h"
 
 // Call Broker Volume Frame 1
-void CBrokerVolumeDB::DoBrokerVolumeFrame1(const TBrokerVolumeFrame1Input *pIn,
+void CBrokerVolumeDB::DoBrokerVolumeFrame1(int clientId, const TBrokerVolumeFrame1Input *pIn,
 		TBrokerVolumeFrame1Output *pOut)
 {
 #ifdef DEBUG
@@ -28,7 +28,7 @@ void CBrokerVolumeDB::DoBrokerVolumeFrame1(const TBrokerVolumeFrame1Input *pIn,
 	startTransaction();
 	// Isolation level required by Clause 7.4.1.3
 	setReadCommitted();
-	execute(pIn, pOut);
+	execute(clientId, pIn, pOut);
 	commitTransaction();
 
 #ifdef DEBUG

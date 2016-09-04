@@ -22,7 +22,7 @@ class CTradeCleanupDB : public TxnRestDB, public CTradeCleanupDBInterface
         CTradeCleanupDB(CDBConnection *pDBConn) : TxnRestDB() {};
         ~CTradeCleanupDB() {};
 
-        virtual void DoTradeCleanupFrame1(const TTradeCleanupFrame1Input *pIn);
+        virtual void DoTradeCleanupFrame1(int clientId, const TTradeCleanupFrame1Input *pIn);
 
         // Function to pass any exception thrown inside
         // database class frame implementation

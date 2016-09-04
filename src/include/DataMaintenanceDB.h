@@ -22,7 +22,7 @@ class CDataMaintenanceDB : public TxnRestDB, public CDataMaintenanceDBInterface
         CDataMaintenanceDB(CDBConnection *pDBConn) : TxnRestDB() {};
         ~CDataMaintenanceDB() {};
 
-        void DoDataMaintenanceFrame1(const TDataMaintenanceFrame1Input *pIn);
+        void DoDataMaintenanceFrame1(int clientId, const TDataMaintenanceFrame1Input *pIn);
 
         // Function to pass any exception thrown inside
         // database class frame implementation

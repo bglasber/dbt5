@@ -23,7 +23,7 @@ void *TradeResultAsync(void *data)
 
 	// communicate with the SUT and log response time
 	pThrParam->pCMEESUT->m_SocketLock.lock();
-	pThrParam->pCMEESUT->talkToSUT(&request);
+	pThrParam->pCMEESUT->talkToSUT(1, &request);
 	pThrParam->pCMEESUT->m_SocketLock.unlock();
 
 	delete pThrParam;
@@ -101,7 +101,7 @@ void *MarketFeedAsync(void* data)
 
 	// communicate with the SUT and log response time
 	pThrParam->pCMEESUT->m_SocketLock.lock();
-	pThrParam->pCMEESUT->talkToSUT(&request);
+	pThrParam->pCMEESUT->talkToSUT(1, &request);
 	pThrParam->pCMEESUT->m_SocketLock.unlock();
 
 	delete pThrParam;

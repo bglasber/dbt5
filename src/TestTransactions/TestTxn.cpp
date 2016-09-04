@@ -229,7 +229,7 @@ void TradeOrder(CDBConnection* pConn, CCETxnInputGenerator* pTxnInputGenerator)
 		m_pCCESUT->TradeOrder(&m_TradeOrderTxnInput, iTradeType,
 				bExecutorIsAccountOwner);
 	} else {
-		m_TradeOrder.DoTxn(&m_TradeOrderTxnInput, &m_TradeOrderTxnOutput);
+		m_TradeOrder.DoTxn(1, &m_TradeOrderTxnInput, &m_TradeOrderTxnOutput);
 	}
 }
 
@@ -253,7 +253,7 @@ void TradeStatus(CDBConnection* pConn, CCETxnInputGenerator* pTxnInputGenerator)
 	if (m_pCCESUT != NULL) {
 		m_pCCESUT->TradeStatus(&m_TradeStatusTxnInput);
 	} else {
-		m_TradeStatus.DoTxn(&m_TradeStatusTxnInput, &m_TradeStatusTxnOutput);
+		m_TradeStatus.DoTxn(1, &m_TradeStatusTxnInput, &m_TradeStatusTxnOutput);
 	}
 }
 
@@ -277,7 +277,7 @@ void TradeLookup(CDBConnection* pConn, CCETxnInputGenerator* pTxnInputGenerator)
 	if (m_pCCESUT != NULL) {
 		m_pCCESUT->TradeLookup(&m_TradeLookupTxnInput);
 	} else {
-		m_TradeLookup.DoTxn(&m_TradeLookupTxnInput, &m_TradeLookupTxnOutput);
+		m_TradeLookup.DoTxn(1, &m_TradeLookupTxnInput, &m_TradeLookupTxnOutput);
 	}
 }
 
@@ -301,7 +301,7 @@ void TradeUpdate(CDBConnection* pConn, CCETxnInputGenerator* pTxnInputGenerator)
 	if (m_pCCESUT != NULL) {
 		m_pCCESUT->TradeUpdate(&m_TradeUpdateTxnInput);
 	} else {
-		m_TradeUpdate.DoTxn(&m_TradeUpdateTxnInput, &m_TradeUpdateTxnOutput);
+		m_TradeUpdate.DoTxn(1, &m_TradeUpdateTxnInput, &m_TradeUpdateTxnOutput);
 	}
 }
 
@@ -327,7 +327,7 @@ void CustomerPosition(CDBConnection* pConn,
 	if (m_pCCESUT != NULL) {
 		m_pCCESUT->CustomerPosition(&m_CustomerPositionTxnInput);
 	} else {
-		m_CustomerPosition.DoTxn(&m_CustomerPositionTxnInput,
+		m_CustomerPosition.DoTxn(1, &m_CustomerPositionTxnInput,
 				&m_CustomerPositionTxnOutput);
 	}
 }
@@ -353,7 +353,7 @@ void BrokerVolume(CDBConnection* pConn,
 	if (m_pCCESUT != NULL) {
 		m_pCCESUT->BrokerVolume(&m_BrokerVolumeTxnInput);
 	} else {
-		m_BrokerVolume.DoTxn(&m_BrokerVolumeTxnInput, &m_BrokerVolumeTxnOutput);
+		m_BrokerVolume.DoTxn(1, &m_BrokerVolumeTxnInput, &m_BrokerVolumeTxnOutput);
 	}
 }
 
@@ -378,7 +378,7 @@ void SecurityDetail(CDBConnection* pConn,
 	if (m_pCCESUT != NULL) {
 		m_pCCESUT->SecurityDetail(&m_SecurityDetailTxnInput);
 	} else {
-		m_SecurityDetail.DoTxn(&m_SecurityDetailTxnInput,
+		m_SecurityDetail.DoTxn(1, &m_SecurityDetailTxnInput,
 				&m_SecurityDetailTxnOutput);
 	}
 }
@@ -403,7 +403,7 @@ void MarketWatch(CDBConnection* pConn, CCETxnInputGenerator* pTxnInputGenerator)
 	if (m_pCCESUT != NULL) {
 		m_pCCESUT->MarketWatch(&m_MarketWatchTxnInput);
 	} else {
-		m_MarketWatch.DoTxn(&m_MarketWatchTxnInput, &m_MarketWatchTxnOutput);
+		m_MarketWatch.DoTxn(1, &m_MarketWatchTxnInput, &m_MarketWatchTxnOutput);
 	}
 }
 
@@ -467,7 +467,7 @@ int main(int argc, char* argv[])
 		m_fLog.open("test.log", ios::out);
 		m_fMix.open("test-mix.log", ios::out);
 		m_pCCESUT = new CCESUT(szBHaddr, iBHlistenPort, &m_fLog, &m_fMix,
-				&m_LogLock, &m_MixLock);
+				&m_LogLock, &m_MixLock, -1);
 	}
 
 	try {

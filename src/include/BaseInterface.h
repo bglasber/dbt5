@@ -20,7 +20,7 @@ using namespace TPCE;
 class CBaseInterface
 {
 protected:
-	bool talkToSUT(PMsgDriverBrokerage);
+	bool talkToSUT(int clientId, PMsgDriverBrokerage);
 	void logErrorMessage(const string);
 
 	char *m_szBHAddress;

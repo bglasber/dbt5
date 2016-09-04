@@ -12,6 +12,7 @@
 
 // Call Customer Position Frame 1
 void CCustomerPositionDB::DoCustomerPositionFrame1(
+		int clientId,
 		const TCustomerPositionFrame1Input *pIn,
 		TCustomerPositionFrame1Output *pOut)
 {
@@ -26,7 +27,7 @@ void CCustomerPositionDB::DoCustomerPositionFrame1(
 	startTransaction();
 	// Isolation level required by Clause 7.4.1.3
 	setReadCommitted();
-	execute(pIn, pOut);
+	execute(clientId, pIn, pOut);
 
 #ifdef DEBUG
 	cout << pid << " - Customer Position Frame 1 (output)" << endl <<
@@ -71,6 +72,7 @@ void CCustomerPositionDB::DoCustomerPositionFrame1(
 
 // Call Customer Position Frame 2
 void CCustomerPositionDB::DoCustomerPositionFrame2(
+		int clientId,
 		const TCustomerPositionFrame2Input *pIn,
 		TCustomerPositionFrame2Output *pOut)
 {
@@ -81,7 +83,7 @@ void CCustomerPositionDB::DoCustomerPositionFrame2(
 			pid << " -- cust_id: " << pIn->acct_id << endl;
 #endif // DEBUG
 
-	execute(pIn, pOut);
+	execute(clientId, pIn, pOut);
 	commitTransaction();
 
 #ifdef DEBUG
@@ -107,7 +109,7 @@ void CCustomerPositionDB::DoCustomerPositionFrame2(
 }
 
 // Call Customer Position Frame 3
-void CCustomerPositionDB::DoCustomerPositionFrame3()
+void CCustomerPositionDB::DoCustomerPositionFrame3( int clientId )
 {
 #ifdef DEBUG
 	pthread_t pid = pthread_self();

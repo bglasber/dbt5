@@ -3,14 +3,15 @@
  * the file LICENSE, included in this package, for details.
  *
  * Copyright (C) 2006-2007 Rilson Nascimento
- *               2010      Mark Wong
- *
+ *               2010      Mark Wong *
  * 25 June 2006
  */
 
 #include <stdio.h>
 #include <string.h>
+#include <iostream>
 #include <unistd.h>
+#include <errno.h>
 
 #include "CSocket.h"
 #include "CThreadErr.h"
@@ -101,12 +102,22 @@ void CSocket::dbt5Disconnect()
 }
 
 // Receive
-int CSocket::dbt5Receive(void *data, int length)
+int CSocket::dbt5Receive(void *data, int length, int *clientId)
 {
 	int received, total, remaining;
 	remaining = length;
 	total = 0;
 	char *szData = NULL;
+	std::cout << "Going to try and recv clientId..." << std::endl;
+	int recvOut = recv( m_sockfd, clientId, sizeof( int ), 0 );
+	if( recvOut < 4 ) { 
+		//suicide
+		std::cout << "Couldn't recv clientId, suiciding..." << std::endl;
+		std::cout << "Recv code: " << recvOut << std::endl;
+		std::cout << "errno: " << errno << std::endl;
+		int *ptr = NULL;
+		*ptr = 0;
+	}
 	do {
 		errno = 0;
 		received = recv(m_sockfd, data, remaining, 0);
@@ -137,11 +148,18 @@ void CSocket::dbt5Reconnect()
 	dbt5Connect();
 }
 
-int CSocket::dbt5Send(void *data, int length)
+int CSocket::dbt5Send(int clientId, void *data, int length)
 {
 	int sent = 0;
 	int remaining = length;
 	char* szData = NULL;
+
+	std::cout << "Going to send clientId: " << clientId << std::endl;
+	if( send( m_sockfd, &clientId, sizeof(int), 0 ) < 4 ) {
+		std::cout << "Couldn't send clientId, suiciding..." << std::endl;
+		int *ptr = NULL;
+		*ptr = 0;
+	}
 	do {
 		errno = 0;
 		sent = send(m_sockfd, (void*)data, remaining, 0);

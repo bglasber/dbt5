@@ -54,7 +54,7 @@ public:
     {
     };
 
-    void DoTxn( PMarketFeedTxnInput pTxnInput, PMarketFeedTxnOutput pTxnOutput )
+    void DoTxn( int clientId, PMarketFeedTxnInput pTxnInput, PMarketFeedTxnOutput pTxnOutput )
     {
         // Initialization
         TMarketFeedFrame1Input    Frame1Input;
@@ -73,7 +73,7 @@ public:
         }
 
         // Execute Frame 1
-        m_db->DoMarketFeedFrame1(&Frame1Input, &Frame1Output, m_pSendToMarket);
+        m_db->DoMarketFeedFrame1(clientId, &Frame1Input, &Frame1Output, m_pSendToMarket);
 
         // Validate Frame 1 Output
         if (Frame1Output.num_updated < pTxnInput->unique_symbols)

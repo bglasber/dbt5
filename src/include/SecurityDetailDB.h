@@ -22,7 +22,9 @@ class CSecurityDetailDB : public TxnRestDB, public CSecurityDetailDBInterface
         CSecurityDetailDB(CDBConnection *pDBConn) : TxnRestDB() {};
         ~CSecurityDetailDB() {};
 
-        virtual void DoSecurityDetailFrame1(const TSecurityDetailFrame1Input *pIn,
+        virtual void DoSecurityDetailFrame1(
+		int clientId,
+		const TSecurityDetailFrame1Input *pIn,
                 TSecurityDetailFrame1Output *pOut);
 
         // Function to pass any exception thrown inside

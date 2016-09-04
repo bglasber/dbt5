@@ -195,7 +195,7 @@ PGresult *CDBConnection::exec(const char *sql)
 	return res;
 }
 
-void CDBConnection::execute(const TBrokerVolumeFrame1Input *pIn,
+void CDBConnection::execute(int clientId, const TBrokerVolumeFrame1Input *pIn,
 		TBrokerVolumeFrame1Output *pOut)
 {
 	int i_broker_name;
@@ -246,7 +246,7 @@ void CDBConnection::execute(const TBrokerVolumeFrame1Input *pIn,
 	PQclear(res);
 }
 
-void CDBConnection::execute(const TCustomerPositionFrame1Input *pIn,
+void CDBConnection::execute(int clientId, const TCustomerPositionFrame1Input *pIn,
 		TCustomerPositionFrame1Output *pOut)
 {
 	int i_cust_id;
@@ -398,7 +398,7 @@ void CDBConnection::execute(const TCustomerPositionFrame1Input *pIn,
 	PQclear(res);
 }
 
-void CDBConnection::execute(const TCustomerPositionFrame2Input *pIn,
+void CDBConnection::execute(int clientId, const TCustomerPositionFrame2Input *pIn,
 		TCustomerPositionFrame2Output *pOut)
 {
 	int i_hist_dts;
@@ -480,7 +480,7 @@ void CDBConnection::execute(const TCustomerPositionFrame2Input *pIn,
 	PQclear(res);
 }
 
-void CDBConnection::execute(const TDataMaintenanceFrame1Input *pIn)
+void CDBConnection::execute(int clientId, const TDataMaintenanceFrame1Input *pIn)
 {
 	ostringstream osSQL;
 	osSQL << "SELECT * FROM DataMaintenanceFrame1(" <<
@@ -497,7 +497,7 @@ void CDBConnection::execute(const TDataMaintenanceFrame1Input *pIn)
 	PQclear(res);
 }
 
-void CDBConnection::execute(const TMarketFeedFrame1Input *pIn,
+void CDBConnection::execute(int clientId, const TMarketFeedFrame1Input *pIn,
 		TMarketFeedFrame1Output *pOut, CSendToMarketInterface *pMarketExchange)
 {
 	int i_num_updated;
@@ -590,7 +590,7 @@ void CDBConnection::execute(const TMarketFeedFrame1Input *pIn,
 	PQclear(res);
 }
 
-void CDBConnection::execute(const TMarketWatchFrame1Input *pIn,
+void CDBConnection::execute(int clientId, const TMarketWatchFrame1Input *pIn,
 		TMarketWatchFrame1Output *pOut)
 {
 	ostringstream osSQL;
@@ -610,7 +610,7 @@ void CDBConnection::execute(const TMarketWatchFrame1Input *pIn,
 	PQclear(res);
 }
 
-void CDBConnection::execute(const TSecurityDetailFrame1Input *pIn,
+void CDBConnection::execute(int clientId, const TSecurityDetailFrame1Input *pIn,
 		TSecurityDetailFrame1Output *pOut)
 {
 	int i_s52_wk_high;
@@ -915,7 +915,7 @@ void CDBConnection::execute(const TSecurityDetailFrame1Input *pIn,
 	PQclear(res);
 }
 
-void CDBConnection::execute(const TTradeCleanupFrame1Input *pIn)
+void CDBConnection::execute(int clientId, const TTradeCleanupFrame1Input *pIn)
 {
 	ostringstream osSQL;
 	osSQL << "SELECT * FROM TradeCleanupFrame1('" <<
@@ -928,7 +928,7 @@ void CDBConnection::execute(const TTradeCleanupFrame1Input *pIn)
 	PQclear(res);
 }
 
-void CDBConnection::execute(const TTradeLookupFrame1Input *pIn,
+void CDBConnection::execute(int clientId, const TTradeLookupFrame1Input *pIn,
 		TTradeLookupFrame1Output *pOut)
 {
 	int i_bid_price;
@@ -1135,7 +1135,7 @@ void CDBConnection::execute(const TTradeLookupFrame1Input *pIn,
 	PQclear(res);
 }
 
-void CDBConnection::execute(const TTradeLookupFrame2Input *pIn,
+void CDBConnection::execute(int clientId, const TTradeLookupFrame2Input *pIn,
 		TTradeLookupFrame2Output *pOut)
 {
 	int i_bid_price;
@@ -1349,7 +1349,7 @@ void CDBConnection::execute(const TTradeLookupFrame2Input *pIn,
 	PQclear(res);
 }
 
-void CDBConnection::execute(const TTradeLookupFrame3Input *pIn,
+void CDBConnection::execute(int clientId, const TTradeLookupFrame3Input *pIn,
 		TTradeLookupFrame3Output *pOut)
 {
 	int i_acct_id;
@@ -1604,7 +1604,7 @@ void CDBConnection::execute(const TTradeLookupFrame3Input *pIn,
 	PQclear(res);
 }
 
-void CDBConnection::execute(const TTradeLookupFrame4Input *pIn,
+void CDBConnection::execute(int clientId, const TTradeLookupFrame4Input *pIn,
 		TTradeLookupFrame4Output *pOut)
 {
 	int i_holding_history_id;
@@ -1680,7 +1680,7 @@ void CDBConnection::execute(const TTradeLookupFrame4Input *pIn,
 	PQclear(res);
 }
 
-void CDBConnection::execute(const TTradeOrderFrame1Input *pIn,
+void CDBConnection::execute(int clientId, const TTradeOrderFrame1Input *pIn,
 		TTradeOrderFrame1Output *pOut)
 {
 	ostringstream osSQL;
@@ -1706,7 +1706,7 @@ void CDBConnection::execute(const TTradeOrderFrame1Input *pIn,
 	PQclear(res);
 }
 
-void CDBConnection::execute(const TTradeOrderFrame2Input *pIn,
+void CDBConnection::execute(int clientId, const TTradeOrderFrame2Input *pIn,
 		TTradeOrderFrame2Output *pOut)
 {
 	ostringstream osSQL;
@@ -1733,7 +1733,7 @@ void CDBConnection::execute(const TTradeOrderFrame2Input *pIn,
 	PQclear(res);
 }
 
-void CDBConnection::execute(const TTradeOrderFrame3Input *pIn,
+void CDBConnection::execute(int clientId, const TTradeOrderFrame3Input *pIn,
 		TTradeOrderFrame3Output *pOut)
 {
 	ostringstream osSQL;
@@ -1779,7 +1779,7 @@ void CDBConnection::execute(const TTradeOrderFrame3Input *pIn,
 	PQclear(res);
 }
 
-void CDBConnection::execute(const TTradeOrderFrame4Input *pIn,
+void CDBConnection::execute(int clientId, const TTradeOrderFrame4Input *pIn,
 		TTradeOrderFrame4Output *pOut)
 {
 	ostringstream osSQL;
@@ -1808,7 +1808,7 @@ void CDBConnection::execute(const TTradeOrderFrame4Input *pIn,
 	PQclear(res);
 }
 
-void CDBConnection::execute(const TTradeResultFrame1Input *pIn,
+void CDBConnection::execute(int clientId, const TTradeResultFrame1Input *pIn,
 		TTradeResultFrame1Output *pOut)
 {
 	ostringstream osSQL;
@@ -1834,7 +1834,7 @@ void CDBConnection::execute(const TTradeResultFrame1Input *pIn,
 	PQclear(res);
 }
 
-void CDBConnection::execute(const TTradeResultFrame2Input *pIn,
+void CDBConnection::execute(int clientId, const TTradeResultFrame2Input *pIn,
 		TTradeResultFrame2Output *pOut)
 {
 	ostringstream osSQL;
@@ -1865,7 +1865,7 @@ void CDBConnection::execute(const TTradeResultFrame2Input *pIn,
 	PQclear(res);
 }
 
-void CDBConnection::execute(const TTradeResultFrame3Input *pIn,
+void CDBConnection::execute(int clientId, const TTradeResultFrame3Input *pIn,
 		TTradeResultFrame3Output *pOut)
 {
 	ostringstream osSQL;
@@ -1881,7 +1881,7 @@ void CDBConnection::execute(const TTradeResultFrame3Input *pIn,
 	PQclear(res);
 }
 
-void CDBConnection::execute(const TTradeResultFrame4Input *pIn,
+void CDBConnection::execute(int clientId, const TTradeResultFrame4Input *pIn,
 		TTradeResultFrame4Output *pOut)
 {
 	ostringstream osSQL;
@@ -1899,7 +1899,7 @@ void CDBConnection::execute(const TTradeResultFrame4Input *pIn,
 	PQclear(res);
 }
 
-void CDBConnection::execute(const TTradeResultFrame5Input *pIn)
+void CDBConnection::execute(int clientId, const TTradeResultFrame5Input *pIn)
 {
 	ostringstream osSQL;
 	osSQL << "SELECT * FROM TradeResultFrame5(" <<
@@ -1923,7 +1923,7 @@ void CDBConnection::execute(const TTradeResultFrame5Input *pIn)
 	PQclear(res);
 }
 
-void CDBConnection::execute(const TTradeResultFrame6Input *pIn,
+void CDBConnection::execute(int clientId, const TTradeResultFrame6Input *pIn,
 		TTradeResultFrame6Output *pOut)
 {
 	ostringstream osSQL;
@@ -1958,7 +1958,7 @@ void CDBConnection::execute(const TTradeResultFrame6Input *pIn,
 	PQclear(res);
 }
 
-void CDBConnection::execute(const TTradeStatusFrame1Input *pIn,
+void CDBConnection::execute(int clientId, const TTradeStatusFrame1Input *pIn,
 		TTradeStatusFrame1Output *pOut)
 {
 	int i_broker_name;
@@ -2112,7 +2112,7 @@ void CDBConnection::execute(const TTradeStatusFrame1Input *pIn,
 	PQclear(res);
 }
 
-void CDBConnection::execute(const TTradeUpdateFrame1Input *pIn,
+void CDBConnection::execute(int clientId, const TTradeUpdateFrame1Input *pIn,
 		TTradeUpdateFrame1Output *pOut)
 {
 	int i_bid_price;
@@ -2339,7 +2339,7 @@ void CDBConnection::execute(const TTradeUpdateFrame1Input *pIn,
 	PQclear(res);
 }
 
-void CDBConnection::execute(const TTradeUpdateFrame2Input *pIn,
+void CDBConnection::execute(int clientId, const TTradeUpdateFrame2Input *pIn,
 		TTradeUpdateFrame2Output *pOut)
 {
 	int i_bid_price;
@@ -2573,7 +2573,7 @@ void CDBConnection::execute(const TTradeUpdateFrame2Input *pIn,
 	PQclear(res);
 }
 
-void CDBConnection::execute(const TTradeUpdateFrame3Input *pIn,
+void CDBConnection::execute(int clientId, const TTradeUpdateFrame3Input *pIn,
 		TTradeUpdateFrame3Output *pOut)
 {
 	int i_acct_id;

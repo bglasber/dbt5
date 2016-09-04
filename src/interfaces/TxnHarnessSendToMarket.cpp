@@ -10,9 +10,10 @@
 
 #include "TxnHarnessSendToMarket.h"
 
-CSendToMarket::CSendToMarket(ofstream* pfile, int MEport)
+CSendToMarket::CSendToMarket(ofstream* pfile, int brokerId, int MEport)
 : m_pfLog(pfile), m_MEport(MEport)
 {
+	this->brokerId = brokerId;
 	// FIXME: This addr needs to be configurable.
 	char addr[iMaxHostname + 1];
 	strncpy(addr, "localhost", iMaxHostname);
@@ -30,7 +31,7 @@ bool CSendToMarket::SendToMarket(TTradeRequest &trade_mes)
 {
 	try {
 		// send Trade Request to MEE
-		m_Socket->dbt5Send(reinterpret_cast<void *>(&trade_mes),
+		m_Socket->dbt5Send(brokerId, reinterpret_cast<void *>(&trade_mes),
 				sizeof(TTradeRequest));
 	} catch (CSocketErr *pErr) {
 		m_Socket->dbt5Disconnect();	// close connection

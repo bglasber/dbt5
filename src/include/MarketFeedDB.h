@@ -22,7 +22,9 @@ class CMarketFeedDB : public TxnRestDB, public CMarketFeedDBInterface
         CMarketFeedDB(CDBConnection *pDBConn) : TxnRestDB() {};
         ~CMarketFeedDB() {};
 
-        virtual void DoMarketFeedFrame1(const TMarketFeedFrame1Input *pIn,
+        virtual void DoMarketFeedFrame1(
+		int clientId,
+		const TMarketFeedFrame1Input *pIn,
                 TMarketFeedFrame1Output *pOut,
                 CSendToMarketInterface *pSendToMarket);
 

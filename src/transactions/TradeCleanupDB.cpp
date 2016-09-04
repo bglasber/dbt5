@@ -11,7 +11,7 @@
 #include "TradeCleanupDB.h"
 
 // Call Trade Cleanup Frame 1
-void CTradeCleanupDB::DoTradeCleanupFrame1(const TTradeCleanupFrame1Input *pIn)
+void CTradeCleanupDB::DoTradeCleanupFrame1(int clientId, const TTradeCleanupFrame1Input *pIn)
 {
 #ifdef DEBUG
 	pthread_t pid = pthread_self();
@@ -23,7 +23,7 @@ void CTradeCleanupDB::DoTradeCleanupFrame1(const TTradeCleanupFrame1Input *pIn)
 #endif // DEBUG
 
 	startTransaction();
-	execute(pIn);
+	execute(clientId, pIn);
 	commitTransaction();
 
 #ifdef DEBUG

@@ -52,7 +52,7 @@ public:
     {
     };
 
-    void DoTxn( PBrokerVolumeTxnInput pTxnInput, PBrokerVolumeTxnOutput pTxnOutput )
+    void DoTxn( int clientId, PBrokerVolumeTxnInput pTxnInput, PBrokerVolumeTxnOutput pTxnOutput )
     {
         // Initialize
         TBrokerVolumeFrame1Output   Frame1Output;
@@ -61,7 +61,7 @@ public:
         TXN_HARNESS_SET_STATUS_SUCCESS;
 
         // Execute Frame 1
-        m_db->DoBrokerVolumeFrame1( pTxnInput, &Frame1Output );
+        m_db->DoBrokerVolumeFrame1( clientId, pTxnInput, &Frame1Output );
 
         // Validate Frame 1 Output
         if (Frame1Output.list_len < 0 || Frame1Output.list_len > max_broker_list_len)

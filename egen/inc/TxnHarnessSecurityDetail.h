@@ -52,7 +52,7 @@ public:
     {
     };
 
-    void DoTxn( PSecurityDetailTxnInput pTxnInput, PSecurityDetailTxnOutput pTxnOutput )
+    void DoTxn( int clientId, PSecurityDetailTxnInput pTxnInput, PSecurityDetailTxnOutput pTxnOutput )
     {
         // Initialize
         TSecurityDetailFrame1Output Frame1Output;
@@ -65,7 +65,7 @@ public:
         TXN_HARNESS_SET_STATUS_SUCCESS;
 
         // Execute Frame 1
-        m_db->DoSecurityDetailFrame1(pTxnInput, &Frame1Output);
+        m_db->DoSecurityDetailFrame1(clientId, pTxnInput, &Frame1Output);
 
         // Validate Frame 1 Output
         if ((Frame1Output.day_len < min_day_len) || 

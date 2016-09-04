@@ -52,12 +52,12 @@ public:
     {
     };
 
-    void DoTxn( PDataMaintenanceTxnInput pTxnInput, PDataMaintenanceTxnOutput pTxnOutput )
+    void DoTxn( int clientId, PDataMaintenanceTxnInput pTxnInput, PDataMaintenanceTxnOutput pTxnOutput )
     {
         TXN_HARNESS_SET_STATUS_SUCCESS;
 
         // Execute Frame 1
-        m_db->DoDataMaintenanceFrame1(pTxnInput);
+        m_db->DoDataMaintenanceFrame1(clientId, pTxnInput);
     }
 };
 

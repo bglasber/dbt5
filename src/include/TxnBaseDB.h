@@ -29,48 +29,48 @@ protected:
 	void commitTransaction();
 	string escape(string);
 
-	void execute(const TBrokerVolumeFrame1Input *,
+	void execute(int clientId, const TBrokerVolumeFrame1Input *,
 			TBrokerVolumeFrame1Output *);
 
-	void execute(const TCustomerPositionFrame1Input *,
+	void execute(int clientId, const TCustomerPositionFrame1Input *,
 			TCustomerPositionFrame1Output *);
-	void execute(const TCustomerPositionFrame2Input *,
+	void execute(int clientId, const TCustomerPositionFrame2Input *,
 			TCustomerPositionFrame2Output *);
 
-	void execute(const TDataMaintenanceFrame1Input *);
+	void execute(int clientId, const TDataMaintenanceFrame1Input *);
 
-	void execute(const TMarketFeedFrame1Input *, TMarketFeedFrame1Output *,
+	void execute(int clientId, const TMarketFeedFrame1Input *, TMarketFeedFrame1Output *,
         CSendToMarketInterface *);
 
-	void execute(const TMarketWatchFrame1Input *, TMarketWatchFrame1Output *);
+	void execute(int clientId, const TMarketWatchFrame1Input *, TMarketWatchFrame1Output *);
 
-	void execute(const TSecurityDetailFrame1Input *,
+	void execute(int clientId, const TSecurityDetailFrame1Input *,
 			TSecurityDetailFrame1Output *);
 
-	void execute(const TTradeCleanupFrame1Input *);
+	void execute(int clientId, const TTradeCleanupFrame1Input *);
 
-	void execute(const TTradeLookupFrame1Input *, TTradeLookupFrame1Output *);
-	void execute(const TTradeLookupFrame2Input *, TTradeLookupFrame2Output *);
-	void execute(const TTradeLookupFrame3Input *, TTradeLookupFrame3Output *);
-	void execute(const TTradeLookupFrame4Input *, TTradeLookupFrame4Output *);
+	void execute(int clientId, const TTradeLookupFrame1Input *, TTradeLookupFrame1Output *);
+	void execute(int clientId, const TTradeLookupFrame2Input *, TTradeLookupFrame2Output *);
+	void execute(int clientId, const TTradeLookupFrame3Input *, TTradeLookupFrame3Output *);
+	void execute(int clientId, const TTradeLookupFrame4Input *, TTradeLookupFrame4Output *);
 
-	void execute(const TTradeOrderFrame1Input *, TTradeOrderFrame1Output *);
-	void execute(const TTradeOrderFrame2Input *, TTradeOrderFrame2Output *);
-	void execute(const TTradeOrderFrame3Input *, TTradeOrderFrame3Output *);
-	void execute(const TTradeOrderFrame4Input *, TTradeOrderFrame4Output *);
+	void execute(int clientId, const TTradeOrderFrame1Input *, TTradeOrderFrame1Output *);
+	void execute(int clientId, const TTradeOrderFrame2Input *, TTradeOrderFrame2Output *);
+	void execute(int clientId, const TTradeOrderFrame3Input *, TTradeOrderFrame3Output *);
+	void execute(int clientId, const TTradeOrderFrame4Input *, TTradeOrderFrame4Output *);
 
-	void execute(const TTradeResultFrame1Input *, TTradeResultFrame1Output *);
-	void execute(const TTradeResultFrame2Input *, TTradeResultFrame2Output *);
-	void execute(const TTradeResultFrame3Input *, TTradeResultFrame3Output *);
-	void execute(const TTradeResultFrame4Input *, TTradeResultFrame4Output *);
-	void execute(const TTradeResultFrame5Input *);
-	void execute(const TTradeResultFrame6Input *, TTradeResultFrame6Output *);
+	void execute(int clientId, const TTradeResultFrame1Input *, TTradeResultFrame1Output *);
+	void execute(int clientId, const TTradeResultFrame2Input *, TTradeResultFrame2Output *);
+	void execute(int clientId, const TTradeResultFrame3Input *, TTradeResultFrame3Output *);
+	void execute(int clientId, const TTradeResultFrame4Input *, TTradeResultFrame4Output *);
+	void execute(int clientId, const TTradeResultFrame5Input *);
+	void execute(int clientId, const TTradeResultFrame6Input *, TTradeResultFrame6Output *);
 
-	void execute(const TTradeStatusFrame1Input *, TTradeStatusFrame1Output *);
+	void execute(int clientId, const TTradeStatusFrame1Input *, TTradeStatusFrame1Output *);
 
-	void execute(const TTradeUpdateFrame1Input *, TTradeUpdateFrame1Output *);
-	void execute(const TTradeUpdateFrame2Input *, TTradeUpdateFrame2Output *);
-	void execute(const TTradeUpdateFrame3Input *, TTradeUpdateFrame3Output *);
+	void execute(int clientId, const TTradeUpdateFrame1Input *, TTradeUpdateFrame1Output *);
+	void execute(int clientId, const TTradeUpdateFrame2Input *, TTradeUpdateFrame2Output *);
+	void execute(int clientId, const TTradeUpdateFrame3Input *, TTradeUpdateFrame3Output *);
 
 	void reconect();
 

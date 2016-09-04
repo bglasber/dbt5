@@ -24,13 +24,21 @@ class CTradeLookupDB : public TxnRestDB, public CTradeLookupDBInterface
         CTradeLookupDB(CDBConnection *pDBConn) : TxnRestDB() {};
         ~CTradeLookupDB() {};
 
-        virtual void DoTradeLookupFrame1(const TTradeLookupFrame1Input *pIn,
+        virtual void DoTradeLookupFrame1(
+		int clientId,
+		const TTradeLookupFrame1Input *pIn,
                 TTradeLookupFrame1Output *pOut);
-        virtual void DoTradeLookupFrame2(const TTradeLookupFrame2Input *pIn,
+        virtual void DoTradeLookupFrame2(
+		int clientId,
+		const TTradeLookupFrame2Input *pIn,
                 TTradeLookupFrame2Output *pOut);
-        virtual void DoTradeLookupFrame3(const TTradeLookupFrame3Input *pIn,
+        virtual void DoTradeLookupFrame3(
+		int clientId,
+		const TTradeLookupFrame3Input *pIn,
                 TTradeLookupFrame3Output *pOut);
-        virtual void DoTradeLookupFrame4(const TTradeLookupFrame4Input *pIn,
+        virtual void DoTradeLookupFrame4(
+		int clientId,
+		const TTradeLookupFrame4Input *pIn,
                 TTradeLookupFrame4Output *pOut);
 
         // Function to pass any exception thrown inside

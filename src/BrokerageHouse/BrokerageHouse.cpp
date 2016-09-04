@@ -39,6 +39,7 @@ void *workerThread(void *data)
 		TMsgBrokerageDriver Reply; // return message
 		INT32 iRet = 0; // transaction return code
 		CDBConnection *pDBConnection = NULL;
+		int brokerClientId = 2000;
 
 		// new database connection
 		pDBConnection = new CDBConnection(
@@ -49,7 +50,7 @@ void *workerThread(void *data)
 		pDBConnection->setBrokerageHouse(pThrParam->pBrokerageHouse);
 		pThrParam->pBrokerageHouse->logErrorMessage("Set brokerageHouse on conn...\n");
 		CSendToMarket sendToMarket = CSendToMarket(
-				&(pThrParam->pBrokerageHouse->m_fLog));
+				&(pThrParam->pBrokerageHouse->m_fLog), brokerClientId);
 		pThrParam->pBrokerageHouse->logErrorMessage("sendToMarket created...\n");
 		CMarketFeedDB marketFeedDB(pDBConnection);
 		CMarketFeed marketFeed = CMarketFeed(&marketFeedDB, &sendToMarket);
@@ -81,10 +82,11 @@ void *workerThread(void *data)
 		pThrParam->pBrokerageHouse->logErrorMessage("DB tran objects created...\n");
 
 		do {
+			int clientId;
 			try {
 				pThrParam->pBrokerageHouse->logErrorMessage("trying to receive..\n");
 				sockDrv.dbt5Receive(reinterpret_cast<void *>(pMessage),
-						sizeof(TMsgDriverBrokerage));
+						sizeof(TMsgDriverBrokerage), &clientId);
 			} catch(CSocketErr *pErr) {
 				sockDrv.dbt5Disconnect();
 
@@ -107,26 +109,26 @@ void *workerThread(void *data)
 					pThrParam->pBrokerageHouse->logErrorMessage("broker volume transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunBrokerVolume(
 							&(pMessage->TxnInput.BrokerVolumeTxnInput),
-							brokerVolume);
+							brokerVolume, clientId);
 					pThrParam->pBrokerageHouse->logErrorMessage("broker volume transaction done...\n");
 					break;
 				case CUSTOMER_POSITION:
 					pThrParam->pBrokerageHouse->logErrorMessage("customer_position transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunCustomerPosition(
 							&(pMessage->TxnInput.CustomerPositionTxnInput),
-							customerPosition);
+							customerPosition, clientId);
 					pThrParam->pBrokerageHouse->logErrorMessage("customer_position transaction done...\n");
 					break;
 				case MARKET_FEED:
 					pThrParam->pBrokerageHouse->logErrorMessage("market_feed transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunMarketFeed(
-							&(pMessage->TxnInput.MarketFeedTxnInput), marketFeed);
+							&(pMessage->TxnInput.MarketFeedTxnInput), marketFeed, clientId);
 					pThrParam->pBrokerageHouse->logErrorMessage("market_feed transaction done...\n");
 					break;
 				case MARKET_WATCH:
 					pThrParam->pBrokerageHouse->logErrorMessage("market_watch transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunMarketWatch(
-							&(pMessage->TxnInput.MarketWatchTxnInput), marketWatch);
+							&(pMessage->TxnInput.MarketWatchTxnInput), marketWatch, clientId);
 
 					pThrParam->pBrokerageHouse->logErrorMessage("market_watch transaction done...\n");
 					break;
@@ -134,45 +136,45 @@ void *workerThread(void *data)
 					pThrParam->pBrokerageHouse->logErrorMessage("security_detail transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunSecurityDetail(
 							&(pMessage->TxnInput.SecurityDetailTxnInput),
-							securityDetail);
+							securityDetail, clientId);
 					pThrParam->pBrokerageHouse->logErrorMessage("security_detail transaction done...\n");
 					break;
 				case TRADE_LOOKUP:
 					pThrParam->pBrokerageHouse->logErrorMessage("trade_lookup transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunTradeLookup(
-							&(pMessage->TxnInput.TradeLookupTxnInput), tradeLookup);
+							&(pMessage->TxnInput.TradeLookupTxnInput), tradeLookup, clientId);
 					pThrParam->pBrokerageHouse->logErrorMessage("trade_lookup transaction done...\n");
 					break;
 				case TRADE_ORDER:
 					pThrParam->pBrokerageHouse->logErrorMessage("trade_order transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunTradeOrder(
-							&(pMessage->TxnInput.TradeOrderTxnInput), tradeOrder);
+							&(pMessage->TxnInput.TradeOrderTxnInput), tradeOrder, clientId);
 					pThrParam->pBrokerageHouse->logErrorMessage("trade_order transaction done...\n");
 					break;
 				case TRADE_RESULT:
 					pThrParam->pBrokerageHouse->logErrorMessage("trade_result transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunTradeResult(
-							&(pMessage->TxnInput.TradeResultTxnInput), tradeResult);
+							&(pMessage->TxnInput.TradeResultTxnInput), tradeResult, clientId);
 					pThrParam->pBrokerageHouse->logErrorMessage("trade_result transaction done...\n");
 					break;
 				case TRADE_STATUS:
 					pThrParam->pBrokerageHouse->logErrorMessage("trade_status transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunTradeStatus(
 							&(pMessage->TxnInput.TradeStatusTxnInput),
-							tradeStatus);
+							tradeStatus, clientId);
 					pThrParam->pBrokerageHouse->logErrorMessage("trade_status transaction done...\n");
 					break;
 				case TRADE_UPDATE:
 					pThrParam->pBrokerageHouse->logErrorMessage("trade_update transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunTradeUpdate(
-							&(pMessage->TxnInput.TradeUpdateTxnInput), tradeUpdate);
+							&(pMessage->TxnInput.TradeUpdateTxnInput), tradeUpdate, clientId);
 					pThrParam->pBrokerageHouse->logErrorMessage("trade_update transaction done...\n");
 					break;
 				case DATA_MAINTENANCE:
 					pThrParam->pBrokerageHouse->logErrorMessage("data_maintenance transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunDataMaintenance(
 							&(pMessage->TxnInput.DataMaintenanceTxnInput),
-							dataMaintenance);
+							dataMaintenance, clientId);
 					pThrParam->pBrokerageHouse->logErrorMessage("data_maintenance transaction done...\n");
 					break;
 				case TRADE_CLEANUP:
@@ -180,7 +182,7 @@ void *workerThread(void *data)
 					pThrParam->pBrokerageHouse->logErrorMessage("trade_cleanup transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunTradeCleanup(
 							&(pMessage->TxnInput.TradeCleanupTxnInput),
-							tradeCleanup);
+							tradeCleanup, clientId);
 					pThrParam->pBrokerageHouse->logErrorMessage("trade_cleanup transaction done...\n");
 					break;
 				default:
@@ -198,7 +200,7 @@ void *workerThread(void *data)
 			// send status to driver
 			Reply.iStatus = iRet;
 			try {
-				sockDrv.dbt5Send(reinterpret_cast<void *>(&Reply), sizeof(Reply));
+				sockDrv.dbt5Send(brokerClientId, reinterpret_cast<void *>(&Reply), sizeof(Reply));
 			} catch(CSocketErr *pErr) {
 				sockDrv.dbt5Disconnect();
 
@@ -509,13 +511,13 @@ void CBrokerageHouse::dumpInputData(PTradeUpdateTxnInput pTxnInput)
 
 // Run Broker Volume transaction
 INT32 CBrokerageHouse::RunBrokerVolume(PBrokerVolumeTxnInput pTxnInput,
-		CBrokerVolume &brokerVolume)
+		CBrokerVolume &brokerVolume, int clientId)
 {
 	TBrokerVolumeTxnOutput bvOutput;
 	memset(&bvOutput, 0, sizeof(TBrokerVolumeTxnOutput));
 
 	try {
-		brokerVolume.DoTxn(pTxnInput, &bvOutput);
+		brokerVolume.DoTxn(clientId, pTxnInput, &bvOutput);
 	} catch (const exception &e) {
 		logErrorMessage("BV EXCEPTION\n", false);
 		bvOutput.status = CBaseTxnErr::EXPECTED_ROLLBACK;
@@ -532,13 +534,13 @@ INT32 CBrokerageHouse::RunBrokerVolume(PBrokerVolumeTxnInput pTxnInput,
 
 // Run Customer Position transaction
 INT32 CBrokerageHouse::RunCustomerPosition(PCustomerPositionTxnInput pTxnInput,
-		CCustomerPosition &customerPosition)
+		CCustomerPosition &customerPosition, int clientId)
 {
 	TCustomerPositionTxnOutput cpOutput;
 	memset(&cpOutput, 0, sizeof(TCustomerPositionTxnOutput));
 
 	try {
-		customerPosition.DoTxn(pTxnInput, &cpOutput);
+		customerPosition.DoTxn(clientId, pTxnInput, &cpOutput);
 	} catch (const exception &e) {
 		logErrorMessage("CP EXCEPTION\n", false);
 		cpOutput.status = CBaseTxnErr::EXPECTED_ROLLBACK;
@@ -555,13 +557,13 @@ INT32 CBrokerageHouse::RunCustomerPosition(PCustomerPositionTxnInput pTxnInput,
 
 // Run Data Maintenance transaction
 INT32 CBrokerageHouse::RunDataMaintenance(PDataMaintenanceTxnInput pTxnInput,
-		CDataMaintenance &dataMaintenance)
+		CDataMaintenance &dataMaintenance, int clientId)
 {
 	TDataMaintenanceTxnOutput dmOutput;
 	memset(&dmOutput, 0, sizeof(TDataMaintenanceTxnOutput));
 
 	try {
-		dataMaintenance.DoTxn(pTxnInput, &dmOutput);
+		dataMaintenance.DoTxn(clientId, pTxnInput, &dmOutput);
 	} catch (const exception &e) {
 		logErrorMessage("DM EXCEPTION\n", false);
 		dmOutput.status = CBaseTxnErr::EXPECTED_ROLLBACK;
@@ -578,7 +580,7 @@ INT32 CBrokerageHouse::RunDataMaintenance(PDataMaintenanceTxnInput pTxnInput,
 
 // Run Trade Cleanup transaction
 INT32 CBrokerageHouse::RunTradeCleanup(PTradeCleanupTxnInput pTxnInput,
-		CTradeCleanup &tradeCleanup)
+		CTradeCleanup &tradeCleanup, int clientId)
 {
 	
 	TTradeCleanupTxnOutput tcOutput;
@@ -586,7 +588,7 @@ INT32 CBrokerageHouse::RunTradeCleanup(PTradeCleanupTxnInput pTxnInput,
 
 	try {
 		logErrorMessage("Starting txn...\n");
-		tradeCleanup.DoTxn(pTxnInput, &tcOutput);
+		tradeCleanup.DoTxn(clientId, pTxnInput, &tcOutput);
 		logErrorMessage("Done txn...\n");
 	} catch (const exception &e) {
 		logErrorMessage("TC EXCEPTION\n", false);
@@ -604,13 +606,13 @@ INT32 CBrokerageHouse::RunTradeCleanup(PTradeCleanupTxnInput pTxnInput,
 
 // Run Market Feed transaction
 INT32 CBrokerageHouse::RunMarketFeed(PMarketFeedTxnInput pTxnInput,
-		CMarketFeed &marketFeed)
+		CMarketFeed &marketFeed, int clientId)
 {
 	TMarketFeedTxnOutput mfOutput;
 	memset(&mfOutput, 0, sizeof(TMarketFeedTxnOutput));
 
 	try {
-		marketFeed.DoTxn(pTxnInput, &mfOutput);
+		marketFeed.DoTxn(clientId, pTxnInput, &mfOutput);
 	} catch (const exception &e) {
 		logErrorMessage("MF EXCEPTION\n", false);
 		mfOutput.status = CBaseTxnErr::EXPECTED_ROLLBACK;
@@ -627,13 +629,13 @@ INT32 CBrokerageHouse::RunMarketFeed(PMarketFeedTxnInput pTxnInput,
 
 // Run Market Watch transaction
 INT32 CBrokerageHouse::RunMarketWatch(PMarketWatchTxnInput pTxnInput,
-		CMarketWatch &marketWatch)
+		CMarketWatch &marketWatch, int clientId)
 {
 	TMarketWatchTxnOutput mwOutput;
 	memset(&mwOutput, 0, sizeof(TMarketWatchTxnOutput));
 
 	try {
-		marketWatch.DoTxn(pTxnInput, &mwOutput);
+		marketWatch.DoTxn(clientId, pTxnInput, &mwOutput);
 	} catch (const exception &e) {
 		logErrorMessage("MW EXCEPTION\n", false);
 		mwOutput.status = CBaseTxnErr::EXPECTED_ROLLBACK;
@@ -650,13 +652,13 @@ INT32 CBrokerageHouse::RunMarketWatch(PMarketWatchTxnInput pTxnInput,
 
 // Run Security Detail transaction
 INT32 CBrokerageHouse::RunSecurityDetail(PSecurityDetailTxnInput pTxnInput,
-		CSecurityDetail &securityDetail)
+		CSecurityDetail &securityDetail, int clientId)
 {
 	TSecurityDetailTxnOutput sdOutput;
 	memset(&sdOutput, 0, sizeof(TSecurityDetailTxnOutput));
 
 	try {
-		securityDetail.DoTxn(pTxnInput, &sdOutput);
+		securityDetail.DoTxn(clientId, pTxnInput, &sdOutput);
 	} catch (const exception &e) {
 		logErrorMessage("SD EXCEPTION\n", false);
 		sdOutput.status = CBaseTxnErr::EXPECTED_ROLLBACK;
@@ -673,13 +675,13 @@ INT32 CBrokerageHouse::RunSecurityDetail(PSecurityDetailTxnInput pTxnInput,
 
 // Run Trade Lookup transaction
 INT32 CBrokerageHouse::RunTradeLookup(PTradeLookupTxnInput pTxnInput,
-		CTradeLookup &tradeLookup)
+		CTradeLookup &tradeLookup, int clientId)
 {
 	TTradeLookupTxnOutput tlOutput;
 	memset(&tlOutput, 0, sizeof(TTradeLookupTxnOutput));
 
 	try {
-		tradeLookup.DoTxn(pTxnInput, &tlOutput);
+		tradeLookup.DoTxn(clientId, pTxnInput, &tlOutput);
 	} catch (const exception &e) {
 		logErrorMessage("TL EXCEPTION\n", false);
 		tlOutput.status = CBaseTxnErr::EXPECTED_ROLLBACK;
@@ -696,13 +698,13 @@ INT32 CBrokerageHouse::RunTradeLookup(PTradeLookupTxnInput pTxnInput,
 
 // Run Trade Order transaction
 INT32 CBrokerageHouse::RunTradeOrder(PTradeOrderTxnInput pTxnInput,
-		CTradeOrder &tradeOrder)
+		CTradeOrder &tradeOrder, int clientId)
 {
 	TTradeOrderTxnOutput toOutput;
 	memset(&toOutput, 0, sizeof(TTradeOrderTxnOutput));
 
 	try {
-		tradeOrder.DoTxn(pTxnInput, &toOutput);
+		tradeOrder.DoTxn(clientId, pTxnInput, &toOutput);
 	} catch (const exception &e) {
 		toOutput.status = CBaseTxnErr::EXPECTED_ROLLBACK;
 	}
@@ -719,13 +721,13 @@ INT32 CBrokerageHouse::RunTradeOrder(PTradeOrderTxnInput pTxnInput,
 
 // Run Trade Result transaction
 INT32 CBrokerageHouse::RunTradeResult(PTradeResultTxnInput pTxnInput,
-		CTradeResult &tradeResult)
+		CTradeResult &tradeResult, int clientId)
 {
 	TTradeResultTxnOutput trOutput;
 	memset(&trOutput, 0, sizeof(TTradeResultTxnOutput));
 
 	try {
-		tradeResult.DoTxn(pTxnInput, &trOutput);
+		tradeResult.DoTxn(clientId, pTxnInput, &trOutput);
 	} catch (const exception &e) {
 		logErrorMessage("TR EXCEPTION\n", false);
 		trOutput.status = CBaseTxnErr::EXPECTED_ROLLBACK;
@@ -742,13 +744,13 @@ INT32 CBrokerageHouse::RunTradeResult(PTradeResultTxnInput pTxnInput,
 
 // Run Trade Status transaction
 INT32 CBrokerageHouse::RunTradeStatus(PTradeStatusTxnInput pTxnInput,
-		CTradeStatus &tradeStatus)
+		CTradeStatus &tradeStatus, int clientId)
 {
 	TTradeStatusTxnOutput tsOutput;
 	memset(&tsOutput, 0, sizeof(TTradeStatusTxnOutput));
 
 	try {
-		tradeStatus.DoTxn(pTxnInput, &tsOutput);
+		tradeStatus.DoTxn(clientId, pTxnInput, &tsOutput);
 	} catch (const exception &e) {
 		logErrorMessage("TS EXCEPTION\n", false);
 		tsOutput.status = CBaseTxnErr::EXPECTED_ROLLBACK;
@@ -765,13 +767,13 @@ INT32 CBrokerageHouse::RunTradeStatus(PTradeStatusTxnInput pTxnInput,
 
 // Run Trade Update transaction
 INT32 CBrokerageHouse::RunTradeUpdate(PTradeUpdateTxnInput pTxnInput,
-		CTradeUpdate &tradeUpdate)
+		CTradeUpdate &tradeUpdate, int clientId)
 {
 	TTradeUpdateTxnOutput tuOutput;
 	memset(&tuOutput, 0, sizeof(TTradeUpdateTxnOutput));
 
 	try {
-		tradeUpdate.DoTxn(pTxnInput, &tuOutput);
+		tradeUpdate.DoTxn(clientId, pTxnInput, &tuOutput);
 	} catch (const exception &e) {
 		logErrorMessage("TU EXCEPTION\n", false);
 		tuOutput.status = CBaseTxnErr::EXPECTED_ROLLBACK;

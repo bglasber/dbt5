@@ -25,80 +25,80 @@ public:
 
     char *escape(string s);
 
-    void execute( const TBrokerVolumeFrame1Input *pIn,
+    void execute( int clientId, const TBrokerVolumeFrame1Input *pIn,
                   TBrokerVolumeFrame1Output *pOut );
 
-    void execute( const TCustomerPositionFrame1Input *pIn,
+    void execute( int clientId, const TCustomerPositionFrame1Input *pIn,
                   TCustomerPositionFrame1Output *pOut );
 
-    void execute( const TCustomerPositionFrame2Input *pIn,
+    void execute( int clientId, const TCustomerPositionFrame2Input *pIn,
                   TCustomerPositionFrame2Output *pOut );
 
-    void execute( const TDataMaintenanceFrame1Input *pIn );
+    void execute( int clientId, const TDataMaintenanceFrame1Input *pIn );
 
-    void execute( const TMarketFeedFrame1Input *pIn,
+    void execute( int clientId, const TMarketFeedFrame1Input *pIn,
                   TMarketFeedFrame1Output *pOut,
                   CSendToMarketInterface *pMarketExchange );
 
-    void execute( const TMarketWatchFrame1Input *pIn,
+    void execute( int clientId, const TMarketWatchFrame1Input *pIn,
                   TMarketWatchFrame1Output *pOut );
 
-    void execute( const TSecurityDetailFrame1Input *pIn,
+    void execute( int clientId, const TSecurityDetailFrame1Input *pIn,
                   TSecurityDetailFrame1Output *pOut );
 
-    void execute( const TTradeCleanupFrame1Input *pIn );
+    void execute( int clientId, const TTradeCleanupFrame1Input *pIn );
 
-    void execute( const TTradeLookupFrame1Input *pIn,
+    void execute( int clientId, const TTradeLookupFrame1Input *pIn,
                   TTradeLookupFrame1Output *pOut );
 
-    void execute( const TTradeLookupFrame2Input *pIn,
+    void execute( int clientId, const TTradeLookupFrame2Input *pIn,
                   TTradeLookupFrame2Output *pOut );
 
-    void execute( const TTradeLookupFrame3Input *pIn,
+    void execute( int clientId, const TTradeLookupFrame3Input *pIn,
                   TTradeLookupFrame3Output *pOut );
 
-    void execute( const TTradeLookupFrame4Input *pIn,
+    void execute( int clientId, const TTradeLookupFrame4Input *pIn,
                   TTradeLookupFrame4Output *pOut );
 
-    void execute( const TTradeOrderFrame1Input *pIn,
+    void execute( int clientId, const TTradeOrderFrame1Input *pIn,
                   TTradeOrderFrame1Output *pOut );
 
-    void execute( const TTradeOrderFrame2Input *pIn,
+    void execute( int clientId, const TTradeOrderFrame2Input *pIn,
                   TTradeOrderFrame2Output *pOut );
 
-    void execute( const TTradeOrderFrame3Input *pIn,
+    void execute( int clientId, const TTradeOrderFrame3Input *pIn,
                   TTradeOrderFrame3Output *pOut );
 
-    void execute( const TTradeOrderFrame4Input *pIn,
+    void execute( int clientId, const TTradeOrderFrame4Input *pIn,
                   TTradeOrderFrame4Output *pOut );
 
-    void execute( const TTradeResultFrame1Input *pIn,
+    void execute( int clientId, const TTradeResultFrame1Input *pIn,
                   TTradeResultFrame1Output *pOut );
 
-    void execute( const TTradeResultFrame2Input *pIn,
+    void execute( int clientId, const TTradeResultFrame2Input *pIn,
                   TTradeResultFrame2Output *pOut );
 
-    void execute( const TTradeResultFrame3Input *pIn,
+    void execute( int clientId, const TTradeResultFrame3Input *pIn,
                   TTradeResultFrame3Output *pOut );
 
-    void execute( const TTradeResultFrame4Input *pIn,
+    void execute( int clientId, const TTradeResultFrame4Input *pIn,
                   TTradeResultFrame4Output *pOut );
 
-    void execute( const TTradeResultFrame5Input *pIn );
+    void execute( int clientId, const TTradeResultFrame5Input *pIn );
 
-    void execute( const TTradeResultFrame6Input *pIn,
+    void execute( int clientId, const TTradeResultFrame6Input *pIn,
                   TTradeResultFrame6Output *pOut );
 
-    void execute( const TTradeStatusFrame1Input *pIn,
+    void execute( int clientId, const TTradeStatusFrame1Input *pIn,
                   TTradeStatusFrame1Output *pOut );
 
-    void execute( const TTradeUpdateFrame1Input *pIn,
+    void execute( int clientId, const TTradeUpdateFrame1Input *pIn,
                   TTradeUpdateFrame1Output *pOut );
 
-    void execute( const TTradeUpdateFrame2Input *pIn,
+    void execute( int clientId, const TTradeUpdateFrame2Input *pIn,
                   TTradeUpdateFrame2Output *pOut );
 
-    void execute( const TTradeUpdateFrame3Input *pIn,
+    void execute( int clientId, const TTradeUpdateFrame3Input *pIn,
                   TTradeUpdateFrame3Output *pOut );
 
     void reconnect();

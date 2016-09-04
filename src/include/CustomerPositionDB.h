@@ -25,12 +25,14 @@ class CCustomerPositionDB : public TxnRestDB, public CCustomerPositionDBInterfac
         ~CCustomerPositionDB() {};
 
         virtual void DoCustomerPositionFrame1(
+		int clientId,
                 const TCustomerPositionFrame1Input *pIn,
                 TCustomerPositionFrame1Output *pOut);
         virtual void DoCustomerPositionFrame2(
+		int clientId,
                 const TCustomerPositionFrame2Input *pIn,
                 TCustomerPositionFrame2Output *pOut);
-        virtual void DoCustomerPositionFrame3();
+        virtual void DoCustomerPositionFrame3( int clientId );
 
         // Function to pass any exception thrown inside
         // database class frame implementation

@@ -11,7 +11,9 @@
 #include "TradeOrderDB.h"
 
 // Call Trade Order Frame 1
-void CTradeOrderDB::DoTradeOrderFrame1(const TTradeOrderFrame1Input *pIn,
+void CTradeOrderDB::DoTradeOrderFrame1(
+		int clientId,
+		const TTradeOrderFrame1Input *pIn,
 		TTradeOrderFrame1Output *pOut)
 {
 #ifdef DEBUG
@@ -24,7 +26,7 @@ void CTradeOrderDB::DoTradeOrderFrame1(const TTradeOrderFrame1Input *pIn,
 	startTransaction();
 	// Isolation level required by Clause 7.4.1.3
 	setRepeatableRead();
-	execute(pIn, pOut);
+	execute(clientId, pIn, pOut);
 
 #ifdef DEBUG
 	cout << pid << " - Trade Order Frame 1 (output)" << endl <<
@@ -41,7 +43,9 @@ void CTradeOrderDB::DoTradeOrderFrame1(const TTradeOrderFrame1Input *pIn,
 }
 
 // Call Trade Order Frame 2
-void CTradeOrderDB::DoTradeOrderFrame2(const TTradeOrderFrame2Input *pIn,
+void CTradeOrderDB::DoTradeOrderFrame2(
+		int clientId,
+		const TTradeOrderFrame2Input *pIn,
 		TTradeOrderFrame2Output *pOut)
 {
 #ifdef DEBUG
@@ -54,7 +58,7 @@ void CTradeOrderDB::DoTradeOrderFrame2(const TTradeOrderFrame2Input *pIn,
 			pid << " -- exec_tax_id: " << pIn->exec_tax_id << endl;
 #endif // DEBUG
 
-	execute(pIn, pOut);
+	execute(clientId, pIn, pOut);
 
 #ifdef DEBUG
 	cout << pid << " - Trade Order Frame 2 (output)" << endl <<
@@ -64,7 +68,9 @@ void CTradeOrderDB::DoTradeOrderFrame2(const TTradeOrderFrame2Input *pIn,
 }
 
 // Call Trade Order Frame 3
-void CTradeOrderDB::DoTradeOrderFrame3(const TTradeOrderFrame3Input *pIn,
+void CTradeOrderDB::DoTradeOrderFrame3(
+		int clientId,
+		const TTradeOrderFrame3Input *pIn,
 		TTradeOrderFrame3Output *pOut)
 {
 #ifdef DEBUG
@@ -87,7 +93,7 @@ void CTradeOrderDB::DoTradeOrderFrame3(const TTradeOrderFrame3Input *pIn,
 			pid << " -- symbol: " << pIn->symbol << endl;
 #endif //DEBUG
 
-	execute(pIn, pOut);
+	execute(clientId, pIn, pOut);
 
 #ifdef DEBUG
 	cout << pid << " - Trade Order Frame 3 (output)" << endl <<
@@ -110,7 +116,9 @@ void CTradeOrderDB::DoTradeOrderFrame3(const TTradeOrderFrame3Input *pIn,
 }
 
 // Call Trade Order Frame 4
-void CTradeOrderDB::DoTradeOrderFrame4(const TTradeOrderFrame4Input *pIn,
+void CTradeOrderDB::DoTradeOrderFrame4(
+		int clientId,
+		const TTradeOrderFrame4Input *pIn,
 		TTradeOrderFrame4Output *pOut)
 {
 #ifdef DEBUG
@@ -133,7 +141,7 @@ void CTradeOrderDB::DoTradeOrderFrame4(const TTradeOrderFrame4Input *pIn,
 #endif //DEBUG
 
 	// we are inside a transaction
-	execute(pIn, pOut);
+	execute(clientId, pIn, pOut);
 
 #ifdef DEBUG
 	cout << pid << " - Trade Order Frame 4 (output)" << endl <<
@@ -143,7 +151,7 @@ void CTradeOrderDB::DoTradeOrderFrame4(const TTradeOrderFrame4Input *pIn,
 }
 
 // Call Trade Order Frame 5
-void CTradeOrderDB::DoTradeOrderFrame5()
+void CTradeOrderDB::DoTradeOrderFrame5( int clientId )
 {
 #ifdef DEBUG
 	pthread_t pid = pthread_self();
@@ -159,7 +167,7 @@ void CTradeOrderDB::DoTradeOrderFrame5()
 }
 
 // Call Trade Order Frame 6
-void CTradeOrderDB::DoTradeOrderFrame6()
+void CTradeOrderDB::DoTradeOrderFrame6( int clientId )
 {
 #ifdef DEBUG
 	pthread_t pid = pthread_self();

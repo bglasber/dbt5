@@ -31,7 +31,7 @@ bool CDMSUT::DataMaintenance(PDataMaintenanceTxnInput pTxnInput)
 	memcpy(&(pRequest->TxnInput.DataMaintenanceTxnInput), pTxnInput,
 			sizeof(TDataMaintenanceTxnInput));
 	
-	return talkToSUT(pRequest);
+	return talkToSUT(1, pRequest);
 }
 
 // Trade Cleanup
@@ -44,5 +44,5 @@ bool CDMSUT::TradeCleanup(PTradeCleanupTxnInput pTxnInput)
 	memcpy(&(pRequest->TxnInput.TradeCleanupTxnInput), pTxnInput,
 			sizeof(TTradeCleanupTxnInput));
 	
-	return talkToSUT(pRequest);
+	return talkToSUT(1, pRequest);
 }

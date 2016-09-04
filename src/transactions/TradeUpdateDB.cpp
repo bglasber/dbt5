@@ -11,7 +11,9 @@
 #include "TradeUpdateDB.h"
 
 // Call Trade Lookup Frame 1
-void CTradeUpdateDB::DoTradeUpdateFrame1(const TTradeUpdateFrame1Input *pIn,
+void CTradeUpdateDB::DoTradeUpdateFrame1(
+		int clientId,
+		const TTradeUpdateFrame1Input *pIn,
 		TTradeUpdateFrame1Output *pOut)
 {
 #ifdef DEBUG
@@ -28,7 +30,7 @@ void CTradeUpdateDB::DoTradeUpdateFrame1(const TTradeUpdateFrame1Input *pIn,
 
 	startTransaction();
 	setRepeatableRead();
-	execute(pIn, pOut);
+	execute(clientId, pIn, pOut);
 	commitTransaction();
 
 #ifdef DEBUG
@@ -117,7 +119,9 @@ void CTradeUpdateDB::DoTradeUpdateFrame1(const TTradeUpdateFrame1Input *pIn,
 }
 
 // Call Trade Lookup Frame 2
-void CTradeUpdateDB::DoTradeUpdateFrame2(const TTradeUpdateFrame2Input *pIn,
+void CTradeUpdateDB::DoTradeUpdateFrame2(
+		int clientId,
+		const TTradeUpdateFrame2Input *pIn,
 		TTradeUpdateFrame2Output *pOut)
 {
 #ifdef DEBUG
@@ -137,7 +141,7 @@ void CTradeUpdateDB::DoTradeUpdateFrame2(const TTradeUpdateFrame2Input *pIn,
 
 	startTransaction();
 	setRepeatableRead();
-	execute(pIn, pOut);
+	execute(clientId, pIn, pOut);
 	commitTransaction();
 
 #ifdef DEBUG
@@ -225,7 +229,9 @@ void CTradeUpdateDB::DoTradeUpdateFrame2(const TTradeUpdateFrame2Input *pIn,
 }
 
 // Call Trade Lookup Frame 3
-void CTradeUpdateDB::DoTradeUpdateFrame3(const TTradeUpdateFrame3Input *pIn,
+void CTradeUpdateDB::DoTradeUpdateFrame3(
+		int clientId,
+		const TTradeUpdateFrame3Input *pIn,
 		TTradeUpdateFrame3Output *pOut)
 {
 #ifdef DEBUG
@@ -246,7 +252,7 @@ void CTradeUpdateDB::DoTradeUpdateFrame3(const TTradeUpdateFrame3Input *pIn,
 
 	startTransaction();
 	setRepeatableRead();
-	execute(pIn, pOut);
+	execute(clientId, pIn, pOut);
 	commitTransaction();
 
 #ifdef DEBUG

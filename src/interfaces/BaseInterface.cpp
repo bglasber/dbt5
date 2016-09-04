@@ -63,7 +63,7 @@ bool CBaseInterface::biDisconnect()
 }
 
 // Connect to BrokerageHouse, send request, receive reply, and calculate RT
-bool CBaseInterface::talkToSUT(PMsgDriverBrokerage pRequest)
+bool CBaseInterface::talkToSUT(int clientId, PMsgDriverBrokerage pRequest)
 {
 	int length = 0;
 	TMsgBrokerageDriver Reply; // reply message from BrokerageHouse
@@ -77,7 +77,7 @@ bool CBaseInterface::talkToSUT(PMsgDriverBrokerage pRequest)
 
 	// send and wait for response
 	try {
-		length = sock->dbt5Send(reinterpret_cast<void *>(pRequest),
+		length = sock->dbt5Send(clientId, reinterpret_cast<void *>(pRequest),
 				sizeof(*pRequest));
 	} catch(CSocketErr *pErr) {
 		sock->dbt5Reconnect();
@@ -92,9 +92,10 @@ bool CBaseInterface::talkToSUT(PMsgDriverBrokerage pRequest)
 		length = -1;
 		delete pErr;
 	}
+	int recvClientId;
 	try {
 		length = sock->dbt5Receive(reinterpret_cast<void *>(&Reply),
-				sizeof(Reply));
+				sizeof(Reply), &recvClientId);
 	} catch(CSocketErr *pErr) {
 		logResponseTime(-1, 0, -2);
 

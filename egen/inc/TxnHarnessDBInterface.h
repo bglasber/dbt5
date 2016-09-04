@@ -54,90 +54,90 @@ namespace TPCE {
 
 class CTradeOrderDBInterface {
     public:
-        virtual void DoTradeOrderFrame1(const TTradeOrderFrame1Input *pIn, TTradeOrderFrame1Output *pOut) = 0;
-        virtual void DoTradeOrderFrame2(const TTradeOrderFrame2Input *pIn, TTradeOrderFrame2Output *pOut) = 0;
-        virtual void DoTradeOrderFrame3(const TTradeOrderFrame3Input *pIn, TTradeOrderFrame3Output *pOut) = 0;
-        virtual void DoTradeOrderFrame4(const TTradeOrderFrame4Input *pIn, TTradeOrderFrame4Output *pOut) = 0;
-        virtual void DoTradeOrderFrame5(void                                                            ) = 0;
-        virtual void DoTradeOrderFrame6(void                                                            ) = 0;
+        virtual void DoTradeOrderFrame1(int clientId, const TTradeOrderFrame1Input *pIn, TTradeOrderFrame1Output *pOut) = 0;
+        virtual void DoTradeOrderFrame2(int clientId, const TTradeOrderFrame2Input *pIn, TTradeOrderFrame2Output *pOut) = 0;
+        virtual void DoTradeOrderFrame3(int clientId, const TTradeOrderFrame3Input *pIn, TTradeOrderFrame3Output *pOut) = 0;
+        virtual void DoTradeOrderFrame4(int clientId, const TTradeOrderFrame4Input *pIn, TTradeOrderFrame4Output *pOut) = 0;
+        virtual void DoTradeOrderFrame5(int clientId) = 0;
+        virtual void DoTradeOrderFrame6(int clientId) = 0;
         virtual ~CTradeOrderDBInterface  () { }
 };
 
 class CTradeStatusDBInterface {
     public:
-        virtual void DoTradeStatusFrame1(const TTradeStatusFrame1Input *pIn, TTradeStatusFrame1Output *pOut) = 0;
+        virtual void DoTradeStatusFrame1(int clientId, const TTradeStatusFrame1Input *pIn, TTradeStatusFrame1Output *pOut) = 0;
         virtual ~CTradeStatusDBInterface  () { }
 };
 
 class CCustomerPositionDBInterface {
     public:
-        virtual void DoCustomerPositionFrame1(const TCustomerPositionFrame1Input *pIn, TCustomerPositionFrame1Output *pOut) = 0;
-        virtual void DoCustomerPositionFrame2(const TCustomerPositionFrame2Input *pIn, TCustomerPositionFrame2Output *pOut) = 0;
-        virtual void DoCustomerPositionFrame3(void                                                                        ) = 0;
+        virtual void DoCustomerPositionFrame1(int clientId, const TCustomerPositionFrame1Input *pIn, TCustomerPositionFrame1Output *pOut) = 0;
+        virtual void DoCustomerPositionFrame2(int clientId, const TCustomerPositionFrame2Input *pIn, TCustomerPositionFrame2Output *pOut) = 0;
+        virtual void DoCustomerPositionFrame3(int clientId) = 0;
         virtual ~CCustomerPositionDBInterface  () { }
 };
 
 class CBrokerVolumeDBInterface {
     public:
-        virtual void DoBrokerVolumeFrame1(const TBrokerVolumeFrame1Input *pIn, TBrokerVolumeFrame1Output *pOut) = 0;
+        virtual void DoBrokerVolumeFrame1(int clientId, const TBrokerVolumeFrame1Input *pIn, TBrokerVolumeFrame1Output *pOut) = 0;
         virtual ~CBrokerVolumeDBInterface  () { }
 };
 
 class CSecurityDetailDBInterface {
     public:
-        virtual void DoSecurityDetailFrame1(const TSecurityDetailFrame1Input *pIn, TSecurityDetailFrame1Output *pOut) = 0;
+        virtual void DoSecurityDetailFrame1(int clientId, const TSecurityDetailFrame1Input *pIn, TSecurityDetailFrame1Output *pOut) = 0;
         virtual ~CSecurityDetailDBInterface  () { }
 };
 
 class CMarketWatchDBInterface {
     public:
-        virtual void DoMarketWatchFrame1 (const TMarketWatchFrame1Input *pIn, TMarketWatchFrame1Output *pOut) = 0;
+        virtual void DoMarketWatchFrame1 (int clientId, const TMarketWatchFrame1Input *pIn, TMarketWatchFrame1Output *pOut) = 0;
         virtual ~CMarketWatchDBInterface   () { }
 };
 
 class CTradeLookupDBInterface {
     public:
-        virtual void DoTradeLookupFrame1(const TTradeLookupFrame1Input *pIn, TTradeLookupFrame1Output *pOut) = 0;
-        virtual void DoTradeLookupFrame2(const TTradeLookupFrame2Input *pIn, TTradeLookupFrame2Output *pOut) = 0;
-        virtual void DoTradeLookupFrame3(const TTradeLookupFrame3Input *pIn, TTradeLookupFrame3Output *pOut) = 0;
-        virtual void DoTradeLookupFrame4(const TTradeLookupFrame4Input *pIn, TTradeLookupFrame4Output *pOut) = 0;
+        virtual void DoTradeLookupFrame1(int clientId, const TTradeLookupFrame1Input *pIn, TTradeLookupFrame1Output *pOut) = 0;
+        virtual void DoTradeLookupFrame2(int clientId, const TTradeLookupFrame2Input *pIn, TTradeLookupFrame2Output *pOut) = 0;
+        virtual void DoTradeLookupFrame3(int clientId, const TTradeLookupFrame3Input *pIn, TTradeLookupFrame3Output *pOut) = 0;
+        virtual void DoTradeLookupFrame4(int clientId, const TTradeLookupFrame4Input *pIn, TTradeLookupFrame4Output *pOut) = 0;
         virtual ~CTradeLookupDBInterface  () { }
 };
 
 class CTradeUpdateDBInterface {
     public:
-        virtual void DoTradeUpdateFrame1(const TTradeUpdateFrame1Input *pIn, TTradeUpdateFrame1Output *pOut) = 0;
-        virtual void DoTradeUpdateFrame2(const TTradeUpdateFrame2Input *pIn, TTradeUpdateFrame2Output *pOut) = 0;
-        virtual void DoTradeUpdateFrame3(const TTradeUpdateFrame3Input *pIn, TTradeUpdateFrame3Output *pOut) = 0;
+        virtual void DoTradeUpdateFrame1(int clientId, const TTradeUpdateFrame1Input *pIn, TTradeUpdateFrame1Output *pOut) = 0;
+        virtual void DoTradeUpdateFrame2(int clientId, const TTradeUpdateFrame2Input *pIn, TTradeUpdateFrame2Output *pOut) = 0;
+        virtual void DoTradeUpdateFrame3(int clientId, const TTradeUpdateFrame3Input *pIn, TTradeUpdateFrame3Output *pOut) = 0;
         virtual ~CTradeUpdateDBInterface  () { }
 };
 
 class CTradeResultDBInterface {
     public:
-        virtual void DoTradeResultFrame1(const TTradeResultFrame1Input *pIn, TTradeResultFrame1Output *pOut) = 0;
-        virtual void DoTradeResultFrame2(const TTradeResultFrame2Input *pIn, TTradeResultFrame2Output *pOut) = 0;
-        virtual void DoTradeResultFrame3(const TTradeResultFrame3Input *pIn, TTradeResultFrame3Output *pOut) = 0;
-        virtual void DoTradeResultFrame4(const TTradeResultFrame4Input *pIn, TTradeResultFrame4Output *pOut) = 0;
-        virtual void DoTradeResultFrame5(const TTradeResultFrame5Input *pIn                                ) = 0;
-        virtual void DoTradeResultFrame6(const TTradeResultFrame6Input *pIn, TTradeResultFrame6Output *pOut) = 0;
+        virtual void DoTradeResultFrame1(int clientId, const TTradeResultFrame1Input *pIn, TTradeResultFrame1Output *pOut) = 0;
+        virtual void DoTradeResultFrame2(int clientId, const TTradeResultFrame2Input *pIn, TTradeResultFrame2Output *pOut) = 0;
+        virtual void DoTradeResultFrame3(int clientId, const TTradeResultFrame3Input *pIn, TTradeResultFrame3Output *pOut) = 0;
+        virtual void DoTradeResultFrame4(int clientId, const TTradeResultFrame4Input *pIn, TTradeResultFrame4Output *pOut) = 0;
+        virtual void DoTradeResultFrame5(int clientId, const TTradeResultFrame5Input *pIn                                ) = 0;
+        virtual void DoTradeResultFrame6(int clientId, const TTradeResultFrame6Input *pIn, TTradeResultFrame6Output *pOut) = 0;
         virtual ~CTradeResultDBInterface  () { }
 };
 
 class CMarketFeedDBInterface {
     public:
-        virtual void DoMarketFeedFrame1(const TMarketFeedFrame1Input *pIn, TMarketFeedFrame1Output *pOut, CSendToMarketInterface *pSendToMarket) = 0;
+        virtual void DoMarketFeedFrame1(int clientId, const TMarketFeedFrame1Input *pIn, TMarketFeedFrame1Output *pOut, CSendToMarketInterface *pSendToMarket) = 0;
         virtual ~CMarketFeedDBInterface  () { }
 };
 
 class CDataMaintenanceDBInterface {
     public:
-        virtual void DoDataMaintenanceFrame1(const TDataMaintenanceFrame1Input *pIn) = 0;
+        virtual void DoDataMaintenanceFrame1(int clientId, const TDataMaintenanceFrame1Input *pIn) = 0;
         virtual ~CDataMaintenanceDBInterface  () { }
 };
 
 class CTradeCleanupDBInterface {
     public:
-        virtual void DoTradeCleanupFrame1(const TTradeCleanupFrame1Input *pIn) = 0;
+        virtual void DoTradeCleanupFrame1(int clientId, const TTradeCleanupFrame1Input *pIn) = 0;
         virtual ~CTradeCleanupDBInterface  () { }
 };
 

@@ -20,13 +20,14 @@ class CSendToMarket : public CSendToMarketInterface
 {
 	ofstream *m_pfLog;
 	int m_MEport;
+	int brokerId;
 	CSocket *m_Socket;
 	CMutex m_LogLock;
 
 public:
 	void LogErrorMessage(const string);
 
-	CSendToMarket(ofstream* pfile, int MEport = iMarketExchangePort);
+	CSendToMarket(ofstream* pfile, int brokerId, int MEport = iMarketExchangePort);
 	~CSendToMarket();
 
 	virtual bool SendToMarket(TTradeRequest &);

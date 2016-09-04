@@ -25,7 +25,9 @@ class CTradeStatusDB : public TxnRestDB, public CTradeStatusDBInterface
 
         ~CTradeStatusDB() {};
 
-        virtual void DoTradeStatusFrame1(const TTradeStatusFrame1Input *pIn,
+        virtual void DoTradeStatusFrame1(
+		int clientId,
+		const TTradeStatusFrame1Input *pIn,
                 TTradeStatusFrame1Output *pOut);
 
         // Function to pass any exception thrown inside

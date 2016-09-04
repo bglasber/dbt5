@@ -34,9 +34,9 @@ public:
 	void dbt5Connect();
 	void dbt5Disconnect();
 	void dbt5Listen(const int);
-	int dbt5Receive(void *, int);
+	int dbt5Receive(void *, int, int *);
 	void dbt5Reconnect();
-	int dbt5Send(void *, int);
+	int dbt5Send(int, void *, int);
 
 	void setSocketFd(int sockfd) { m_sockfd = sockfd; }
 	int getSocketFd() { return m_sockfd; }

@@ -52,11 +52,11 @@ public:
     {
     }
 
-    void DoTxn( PTradeCleanupTxnInput pTxnInput, PTradeCleanupTxnOutput pTxnOutput)
+    void DoTxn( int clientId, PTradeCleanupTxnInput pTxnInput, PTradeCleanupTxnOutput pTxnOutput)
     {
         TXN_HARNESS_SET_STATUS_SUCCESS;
 
-        m_db->DoTradeCleanupFrame1(pTxnInput);
+        m_db->DoTradeCleanupFrame1(clientId, pTxnInput);
     }
 };
 

@@ -22,7 +22,9 @@ class CMarketWatchDB : public TxnRestDB, public CMarketWatchDBInterface
         CMarketWatchDB(CDBConnection *pDBConn) : TxnRestDB() {};
         ~CMarketWatchDB() {};
 
-        virtual void DoMarketWatchFrame1(const TMarketWatchFrame1Input *pIn,
+        virtual void DoMarketWatchFrame1(
+		int clientId,
+		const TMarketWatchFrame1Input *pIn,
                 TMarketWatchFrame1Output *pOut);
 
         // Function to pass any exception thrown inside

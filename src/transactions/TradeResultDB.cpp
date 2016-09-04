@@ -12,6 +12,7 @@
 
 // Call Trade Result Frame 1
 void CTradeResultDB::DoTradeResultFrame1(
+		int clientId,
 		const TTradeResultFrame1Input *pIn,
 		TTradeResultFrame1Output *pOut)
 {
@@ -26,7 +27,7 @@ void CTradeResultDB::DoTradeResultFrame1(
 	startTransaction();
 	// Isolation level required by Clause 7.4.1.3
 	setSerializable();
-	execute(pIn, pOut);
+	execute(clientId, pIn, pOut);
 
 #ifdef DEBUG
 	cout << pid << " - Trade Result Frame 1 (output)" << endl <<
@@ -47,6 +48,7 @@ void CTradeResultDB::DoTradeResultFrame1(
 
 // Call Trade Result Frame 2
 void CTradeResultDB::DoTradeResultFrame2(
+		int clientId,
 		const TTradeResultFrame2Input *pIn,
 		TTradeResultFrame2Output *pOut)
 {
@@ -64,7 +66,7 @@ void CTradeResultDB::DoTradeResultFrame2(
 			pid << " -- type_is_sell: " << pIn->type_is_sell << endl;
 #endif // DEBUG
 
-	execute(pIn, pOut);
+	execute(clientId, pIn, pOut);
 
 #ifdef DEBUG
 	cout << pid << " - Trade Result Frame 2 (output)" << endl <<
@@ -85,6 +87,7 @@ void CTradeResultDB::DoTradeResultFrame2(
 
 // Call Trade Result Frame 3
 void CTradeResultDB::DoTradeResultFrame3(
+		int clientId,
 		const TTradeResultFrame3Input *pIn,
 		TTradeResultFrame3Output *pOut)
 {
@@ -98,7 +101,7 @@ void CTradeResultDB::DoTradeResultFrame3(
 			pid << " -- trade_id: " << pIn->trade_id << endl;
 #endif //DEBUG
 
-	execute(pIn, pOut);
+	execute(clientId, pIn, pOut);
 
 #ifdef DEBUG
 	cout << pid << " - Trade Result Frame 3 (output)" << endl <<
@@ -109,6 +112,7 @@ void CTradeResultDB::DoTradeResultFrame3(
 
 // Call Trade Result Frame 4
 void CTradeResultDB::DoTradeResultFrame4(
+		int clientId,
 		const TTradeResultFrame4Input *pIn,
 		TTradeResultFrame4Output *pOut)
 {
@@ -122,7 +126,7 @@ void CTradeResultDB::DoTradeResultFrame4(
 			pid << " -- type_id: " << pIn->type_id << endl;
 #endif //DEBUG
 
-	execute(pIn, pOut);
+	execute(clientId, pIn, pOut);
 
 #ifdef DEBUG
 	cout << pid << " - Trade Result Frame 4 (output)" << endl <<
@@ -133,7 +137,7 @@ void CTradeResultDB::DoTradeResultFrame4(
 }
 
 // Call Trade Result Frame 5
-void CTradeResultDB::DoTradeResultFrame5(const TTradeResultFrame5Input *pIn)
+void CTradeResultDB::DoTradeResultFrame5(int clientId, const TTradeResultFrame5Input *pIn)
 {
 #ifdef DEBUG
 	pthread_t pid = pthread_self();
@@ -152,7 +156,7 @@ void CTradeResultDB::DoTradeResultFrame5(const TTradeResultFrame5Input *pIn)
 			pid << " -- trade_price: " << pIn->trade_price << endl;
 #endif //DEBUG
 
-	execute(pIn);
+	execute(clientId, pIn);
 
 #ifdef DEBUG
 	cout << pid << " - Trade Result Frame 5 (output)" << endl;
@@ -162,6 +166,7 @@ void CTradeResultDB::DoTradeResultFrame5(const TTradeResultFrame5Input *pIn)
 
 // Call Trade Result Frame 6
 void CTradeResultDB::DoTradeResultFrame6(
+		int clientId,
 		const TTradeResultFrame6Input *pIn,
 		TTradeResultFrame6Output *pOut)
 {
@@ -189,7 +194,7 @@ void CTradeResultDB::DoTradeResultFrame6(
 			pid << " -- type_name: " << pIn->type_name << endl;
 #endif //DEBUG
 
-	execute(pIn, pOut);
+	execute(clientId, pIn, pOut);
 	commitTransaction();
 
 #ifdef DEBUG

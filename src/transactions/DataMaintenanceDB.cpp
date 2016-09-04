@@ -12,6 +12,7 @@
 
 // Call Data Maintenance Frame 1
 void CDataMaintenanceDB::DoDataMaintenanceFrame1(
+		int clientId,
 		const TDataMaintenanceFrame1Input *pIn)
 {
 #ifdef DEBUG
@@ -30,7 +31,7 @@ void CDataMaintenanceDB::DoDataMaintenanceFrame1(
 	startTransaction();
 	// Isolation level required by Clause 7.4.1.3
 	setReadCommitted();
-	execute(pIn);
+	execute(clientId, pIn);
 	commitTransaction();
 
 #ifdef DEBUG

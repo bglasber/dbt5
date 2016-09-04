@@ -66,6 +66,7 @@ public:
 typedef struct TCustomerThreadParam
 {
 	CDriver *pDriver;
+	int	clientId;
 } *PCustomerThreadParam;
 
 

@@ -11,7 +11,9 @@
 #include "MarketWatchDB.h"
 
 // Call Market Watch Frame 1
-void CMarketWatchDB::DoMarketWatchFrame1(const TMarketWatchFrame1Input *pIn,
+void CMarketWatchDB::DoMarketWatchFrame1(
+		int clientId,
+		const TMarketWatchFrame1Input *pIn,
 		TMarketWatchFrame1Output *pOut)
 {
 #ifdef DEBUG
@@ -30,7 +32,7 @@ void CMarketWatchDB::DoMarketWatchFrame1(const TMarketWatchFrame1Input *pIn,
 	startTransaction();
 	// Isolation level required by Clause 7.4.1.3
 	setReadCommitted();
-	execute(pIn, pOut);
+	execute(clientId, pIn, pOut);
 
 	commitTransaction();
 

@@ -24,11 +24,17 @@ class CTradeUpdateDB : public TxnRestDB, public CTradeUpdateDBInterface
         CTradeUpdateDB(CDBConnection *pDBConn) : TxnRestDB() {};
         ~CTradeUpdateDB() {};
 
-        virtual void DoTradeUpdateFrame1(const TTradeUpdateFrame1Input *pIn,
+        virtual void DoTradeUpdateFrame1(
+		int clientId,
+		const TTradeUpdateFrame1Input *pIn,
                 TTradeUpdateFrame1Output *pOut);
-        virtual void DoTradeUpdateFrame2(const TTradeUpdateFrame2Input *pIn,
+        virtual void DoTradeUpdateFrame2(
+		int clientId,
+		const TTradeUpdateFrame2Input *pIn,
                 TTradeUpdateFrame2Output *pOut);
-        virtual void DoTradeUpdateFrame3(const TTradeUpdateFrame3Input *pIn,
+        virtual void DoTradeUpdateFrame3(
+		int clientId,
+		const TTradeUpdateFrame3Input *pIn,
                 TTradeUpdateFrame3Output *pOut);
 
         // Function to pass any exception thrown inside

@@ -58,7 +58,7 @@ public:
     {
     };
 
-    void DoTxn( PTradeOrderTxnInput pTxnInput, PTradeOrderTxnOutput pTxnOutput )
+    void DoTxn( int clientId, PTradeOrderTxnInput pTxnInput, PTradeOrderTxnOutput pTxnOutput )
     {
         // Initialization
         TTradeOrderFrame1Input  Frame1Input;
@@ -93,7 +93,7 @@ public:
         Frame1Input.acct_id = pTxnInput->acct_id;
 
         // Execute Frame 1
-        m_db->DoTradeOrderFrame1(&Frame1Input, &Frame1Output );
+        m_db->DoTradeOrderFrame1( clientId, &Frame1Input, &Frame1Output );
 
         // Validate Frame 1 Output
         if (Frame1Output.num_found != 1)
@@ -117,7 +117,7 @@ public:
             strncpy(Frame2Input.exec_tax_id, pTxnInput->exec_tax_id, sizeof(Frame2Input.exec_tax_id));
 
             // Execute Frame 2
-            m_db->DoTradeOrderFrame2(&Frame2Input, &Frame2Output);
+            m_db->DoTradeOrderFrame2( clientId, &Frame2Input, &Frame2Output);
 
             // Validate Frame 2 Output
             if (Frame2Output.ap_acl[0] == '\0')
@@ -125,7 +125,7 @@ public:
                 TXN_HARNESS_PROPAGATE_STATUS(CBaseTxnErr::TOF2_ERROR1);
 
                 // Rollback
-                m_db->DoTradeOrderFrame5();
+                m_db->DoTradeOrderFrame5(clientId);
                 return;
             }
         }
@@ -151,7 +151,7 @@ public:
         strncpy(Frame3Input.symbol, pTxnInput->symbol, sizeof(Frame3Input.symbol));
 
         // Execute Frame 3
-        m_db->DoTradeOrderFrame3(&Frame3Input, &Frame3Output);
+        m_db->DoTradeOrderFrame3(clientId, &Frame3Input, &Frame3Output);
 
         // Validate Frame 3 Output
         if (   Frame3Output.sell_value > Frame3Output.buy_value
@@ -199,7 +199,7 @@ public:
         Frame4Input.type_is_market = Frame3Output.type_is_market;
 
         // Execute Frame 4
-        m_db->DoTradeOrderFrame4(&Frame4Input, &Frame4Output);
+        m_db->DoTradeOrderFrame4(clientId, &Frame4Input, &Frame4Output);
 
         // Copy Frame 4 Output
         pTxnOutput->trade_id = Frame4Output.trade_id;
@@ -211,14 +211,14 @@ public:
         if (pTxnInput->roll_it_back)
         {
             // Execute Frame 5
-            m_db->DoTradeOrderFrame5();
+            m_db->DoTradeOrderFrame5(clientId);
 
             TXN_HARNESS_PROPAGATE_STATUS(CBaseTxnErr::EXPECTED_ROLLBACK);
         }
         else
         {
             // Execute Frame 6
-            m_db->DoTradeOrderFrame6();
+            m_db->DoTradeOrderFrame6(clientId);
 
             //
             // Send to Market Exchange Emulator

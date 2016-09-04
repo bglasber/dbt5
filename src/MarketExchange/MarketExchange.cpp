@@ -23,8 +23,9 @@ void *MarketWorkerThread(void* data)
 
 	do {
 		try {
+			int clientId;
 			sockDrv.dbt5Receive(reinterpret_cast<void*>(pMessage),
-					sizeof(TTradeRequest));
+					sizeof(TTradeRequest), &clientId);
 	
 			// submit trade request
 			pThrParam->pMarketExchange->m_pCMEE->SubmitTradeRequest(pMessage);
