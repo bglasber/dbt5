@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 DBT5NAME="dbt5"
 
 # Clause 2.2.5.1
