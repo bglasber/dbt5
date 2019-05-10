@@ -457,7 +457,7 @@ echo "Results can be found in: ${OUTPUT_DIR}"
 echo
 echo "1. Starting Brokerage House server"
 
-BrokerageHouseMain ${DB_HOSTNAME_ARG} -d ${DB_NAME} ${DB_PORT_ARG} \
+~/dbt5/bin/BrokerageHouseMain ${DB_HOSTNAME_ARG} -d ${DB_NAME} ${DB_PORT_ARG} \
 		-o ${BH_OUTPUT_DIR} > ${BH_OUTPUT_DIR}/bh.out 2>&1 &
 do_sleep 1
 
@@ -470,7 +470,7 @@ echo "MarketExchangeMain -c ${CUSTOMERS_INSTANCE} -t ${CUSTOMERS_TOTAL} \
 		-i ${EGENDIR}/flat_in \
 		-o ${MEE_OUTPUT_DIR} > ${MEE_OUTPUT_DIR}/mee.out 2>&1 &"
 
-MarketExchangeMain -c ${CUSTOMERS_INSTANCE} -t ${CUSTOMERS_TOTAL} \
+~/dbt5/bin/MarketExchangeMain -c ${CUSTOMERS_INSTANCE} -t ${CUSTOMERS_TOTAL} \
 		-i ${EGENDIR}/flat_in \
 		-o ${MEE_OUTPUT_DIR} > ${MEE_OUTPUT_DIR}/mee.out 2>&1 &
 
@@ -483,7 +483,7 @@ SAMPLE_LENGTH=60
 ITERATIONS=`expr ${SLEEPYTIME} / ${SAMPLE_LENGTH}`
 ITERATIONS=`expr ${ITERATIONS} + 1`
 if [ ! "x${DB_HOSTNAME}" = "x" ] && [ ! "x${DB_HOSTNAME}" = "xlocalhost" ]; then
-	dbt5-sysstats --iter ${ITERATIONS} \
+	./dbt5-sysstats --iter ${ITERATIONS} \
 			--sample ${SAMPLE_LENGTH} \
 			--outdir ${DRIVER_OUTPUT_DIR} > ${DRIVER_OUTPUT_DIR}/stats.out 2>&1 &
 
@@ -491,7 +491,7 @@ if [ ! "x${DB_HOSTNAME}" = "x" ] && [ ! "x${DB_HOSTNAME}" = "xlocalhost" ]; then
 			--sample ${SAMPLE_LENGTH} \
 			--outdir ${DB_OUTPUT_DIR} > ${DB_OUTPUT_DIR}/stats.out 2>&1 &
 else
-	dbt5-sysstats --iter ${ITERATIONS} \
+	./dbt5-sysstats --iter ${ITERATIONS} \
 			--sample ${SAMPLE_LENGTH} \
 			--outdir ${DB_OUTPUT_DIR} > ${DRIVER_OUTPUT_DIR}/stats.out 2>&1 &
 fi
@@ -516,7 +516,7 @@ fi
 echo
 echo "3. Starting Customer driver: ${USERS} user(s)"
 echo "   1 user starting every ${SLEEPY} milliseconds..."
-DriverMain -c ${CUSTOMERS_INSTANCE} -t ${CUSTOMERS_TOTAL} \
+~/dbt5/bin/DriverMain -c ${CUSTOMERS_INSTANCE} -t ${CUSTOMERS_TOTAL} \
 		-f ${SCALE_FACTOR} -w ${ITD} -d ${DURATION} -y ${SLEEPY} \
 		-u ${USERS} -n ${PACING_DELAY} ${SEEDARG} \
 		-i ${EGENDIR}/flat_in \
@@ -615,7 +615,7 @@ echo
 echo "4. Run Post processing analyses"
 
 RESULTSFILE="${OUTPUT_DIR}/results.txt"
-dbt5-post-process ${MIXFILE} > ${RESULTSFILE}
+./dbt5-post-process ${MIXFILE} > ${RESULTSFILE}
 
 # Servers don't go away by themselves like the driver does, so kill it.
 echo "Killing Servers..."

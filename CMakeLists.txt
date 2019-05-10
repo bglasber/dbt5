@@ -207,7 +207,7 @@ ADD_EXECUTABLE(${DBT5_TEST_TXN}
 # Set compiler flags.
 #
 
-SET(CMAKE_CXX_FLAGS "-g -Wall -I${EGENINC} -Isrc/include ${LFS_CFLAGS}")
+SET(CMAKE_CXX_FLAGS "-g -pthread -I${EGENINC} -Isrc/include ${LFS_CFLAGS}")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_FORMAT_MACROS")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_CONSTANT_MACROS")
 # FIXME: How to set this for just ${TXN}/${DBMS}/DBConnection.cpp?
@@ -218,10 +218,10 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DJSON_IS_AMALGAMATION")
 # Set linker flags.
 #
 
-target_link_libraries(${DBT5_BROKERAGE_HOUSE} -lpq -lcurl -lpthread)
-target_link_libraries(${DBT5_DRIVER} -lpthread)
-target_link_libraries(${DBT5_MARKET_EXCHANGE}  -lpthread)
-target_link_libraries(${DBT5_TEST_TXN} -lpq -lcurl -lpthread)
+target_link_libraries(${DBT5_BROKERAGE_HOUSE} -lpq -lcurl)
+target_link_libraries(${DBT5_DRIVER})
+target_link_libraries(${DBT5_MARKET_EXCHANGE})
+target_link_libraries(${DBT5_TEST_TXN} -lpq -lcurl)
 
 #
 # Install rules.

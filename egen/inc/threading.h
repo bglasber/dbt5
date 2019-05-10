@@ -37,6 +37,7 @@
 #ifndef THREADING_H_INCLUDED
 #define THREADING_H_INCLUDED
 
+#include <pthread.h>
 #include <memory>
 #include <sstream>
 #include <stdexcept>
