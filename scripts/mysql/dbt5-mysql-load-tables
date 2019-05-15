@@ -1,0 +1,17 @@
+#!/bin/bash
+DBT5NAME="dbt5"
+
+# Files and Tables are organized here in a topologically sorted order so foreign key dependencies
+# are always satisfied while loading data into the database
+PATHROOT="/home/kjlangen/dbt5/egen/flat_out/"
+FLATFILES=("ZipCode.txt" "Taxrate.txt" "NewsItem.txt" "Address.txt" "Sector.txt" "StatusType.txt" "Industry.txt" "Customer.txt" "Exchange.txt" "Company.txt" "Broker.txt" "Security.txt" "TradeType.txt" "CustomerAccount.txt" "WatchList.txt" "Trade.txt" "HoldingSummary.txt" "CustomerTaxrate.txt" "WatchItem.txt" "LastTrade.txt" "NewsXRef.txt" "DailyMarket.txt" "Financial.txt" "CompanyCompetitor.txt" "CommissionRate.txt" "Charge.txt" "TradeHistory.txt" "TradeRequest.txt" "HoldingHistory.txt" "CashTransaction.txt" "Holding.txt" "Settlement.txt" "AccountPermission.txt")
+TABLES=("zip_code" "taxrate" "news_item" "address" "sector" "status_type" "industry" "customer" "exchange" "company" "broker" "security" "trade_type" "customer_account" "watch_list" "trade" "holding_summary" "customer_taxrate" "watch_item" "last_trade" "news_xref" "daily_market" "financial" "company_competitor" "commission_rate" "charge" "trade_history" "trade_request" "holding_history" "cash_transaction" "holding" "settlement" "account_permission")
+DELIMITER="|"
+
+for i in {0..32}; do
+	LOADCOMMAND="LOAD DATA LOCAL INFILE '${PATHROOT}${FLATFILES[i]}' INTO TABLE ${TABLES[i]} COLUMNS TERMINATED BY '${DELIMITER}';"
+	echo "LOADCOMMAND=${LOADCOMMAND}"
+	echo "Loading table ${TABLES[i]} begun"
+	mysql -u root -D ${DBT5NAME} -e "${LOADCOMMAND}"
+	echo "Loading table ${TABLES[i]} finished"
+done
