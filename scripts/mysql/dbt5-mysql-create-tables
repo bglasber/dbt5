@@ -1,6 +1,7 @@
 #!/bin/bash
 DBT5NAME="dbt5"
 
+echo "Starting"
 # Clause 2.2.5.1
 
 mysql -u root -D ${DBT5NAME} -e "
