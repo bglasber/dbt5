@@ -406,6 +406,11 @@ if [ ! "x${DB_HOSTNAME}" = x ] && [ ! "x${DB_HOSTNAME}" = "xlocalhost" ]; then
 		${DB_HOSTNAME}:${DB_OUTPUT_DIR}/
 fi
 
+# Remove any previous config files
+rm -rf /tmp/dbt5.conf
+echo "${DB_HOSTNAME}" >> /tmp/dbt5.conf
+echo "${DB_PORT}" >> /tmp/dbt5.conf
+
 # Create a readme file in the output directory and date it.
 date >> ${OUTPUT_DIR}/readme.txt
 echo "${COMMENT}" >> ${OUTPUT_DIR}/readme.txt

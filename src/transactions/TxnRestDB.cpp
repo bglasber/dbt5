@@ -137,6 +137,11 @@ void inline TokenizeSmart(const string& str, vector<string>& tokens)
 
 TxnRestDB::TxnRestDB() {
     curl_global_init( CURL_GLOBAL_ALL );
+
+    fstream dbConfigFile;
+    dbConfigFile.open("/tmp/dbt5.conf", ios::in);
+    dbConfigFile >> host >> port;
+    dbConfigFile.close();
 }
 
 size_t write_callback( char *ptr, size_t size, size_t nmemb, void *userdata ) {
@@ -167,11 +172,11 @@ size_t write_callback( char *ptr, size_t size, size_t nmemb, void *userdata ) {
 
 std::vector<Json::Value *> *TxnRestDB::sendQuery( int clientId, string query ){
     CURLcode res;
-    char url[64];
-    char buff[2048];	
+    char url[256];
+    char buff[2048];
     ostringstream os;
     curl = curl_easy_init();
-    snprintf( url, 64, REST_QUERY_URL, clientId );
+    snprintf( url, 256, REST_QUERY_URL, host.c_str(), port.c_str(), clientId );
     cout << "Sending query to: " << url << endl;
     curl_easy_setopt( curl, CURLOPT_URL, url );
     struct curl_slist *chunk = NULL;
