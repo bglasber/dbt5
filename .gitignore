@@ -1,6 +1,7 @@
 *.swp
 *.so
 storedproc/pgsql/c/*.sql
+storedproc/pgsql/c/*.o
 install_manifest.txt
 log
 CMakeCache.txt
