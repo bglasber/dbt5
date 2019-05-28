@@ -16,11 +16,13 @@ class TxnRestDB {
     CURL *curl;
     TTradeRequest m_TriggeredLimitOrders;
     CBrokerageHouse *bh;
+
+public:
     string host;
     string port;
 
-public:
     TxnRestDB();
+    ~TxnRestDB();
 
     std::vector<Json::Value *> *sendQuery( int clientId, string query );
 
@@ -113,6 +115,5 @@ public:
 
     void startTransaction();
     void commitTransaction();
-    ~TxnRestDB();
 };
 #endif //__TXN_REST_DB_H__

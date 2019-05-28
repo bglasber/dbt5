@@ -141,6 +141,7 @@ TxnRestDB::TxnRestDB() {
     fstream dbConfigFile;
     dbConfigFile.open("/tmp/dbt5.conf", ios::in);
     dbConfigFile >> host >> port;
+    cout << pthread_self() << " got: " << host << ":" << port << endl;
     dbConfigFile.close();
 }
 
@@ -174,10 +175,12 @@ std::vector<Json::Value *> *TxnRestDB::sendQuery( int clientId, string query ){
     CURLcode res;
     char url[256];
     char buff[2048];
+    cout << pthread_self() << " Got host: " << host << endl;
+    cout << pthread_self() << " Got host: " << host.c_str() << endl;
     ostringstream os;
     curl = curl_easy_init();
     snprintf( url, 256, REST_QUERY_URL, host.c_str(), port.c_str(), clientId );
-    cout << "Sending query to: " << url << endl;
+    cout << pthread_self() << " Sending query to: " << url << endl;
     curl_easy_setopt( curl, CURLOPT_URL, url );
     struct curl_slist *chunk = NULL;
     chunk = curl_slist_append(chunk, "Content-Type: application/json");
@@ -1150,6 +1153,7 @@ void TxnRestDB::execute( int clientId, const TSecurityDetailFrame1Input *pIn,
 }
 
 void TxnRestDB::execute( int clientId, const TTradeCleanupFrame1Input *pIn ) {
+    cout << pthread_self() << " has host: " << host << endl;
     cout << "*** Beginning Trade Cleanup TxnRestDB ***" << endl;
     ostringstream osSQL;
 
@@ -1157,6 +1161,7 @@ void TxnRestDB::execute( int clientId, const TTradeCleanupFrame1Input *pIn ) {
     osSQL << "ORDER BY tr_t_id";
 
     cout << "Sending query..." << endl;
+    cout << pthread_self() << " has host: " << host << endl;
     std::vector<Json::Value *> *jsonArr = sendQuery( clientId, osSQL.str().c_str() );
 
     cout << "Done sending query..." << endl;
@@ -2392,11 +2397,11 @@ void TxnRestDB::execute( int clientId, const TTradeUpdateFrame1Input *pIn,
             osSQL.clear();
             osSQL.str("");
             if( exec_name.find(" X ") != string::npos ) {
-                osSQL << "SELECT REPLACE( '" << exec_name << "', ' X ', ' ' ) as rep";
+                osSQL << "SELECT REPLACE( '" << exec_name << "', ' X ', ' ' ) AS rep";
                 std::vector<Json::Value *> *rep = sendQuery( clientId, osSQL.str().c_str() );
                 exec_name = rep->at(0)->get("rep", "").asString();
             } else {
-                osSQL << "SELECT REPLACE( '" << exec_name << "', ' ', ' X ' ) as rep";
+                osSQL << "SELECT REPLACE( '" << exec_name << "', ' ', ' X ' ) AS rep";
                 std::vector<Json::Value *> *rep = sendQuery( clientId, osSQL.str().c_str() );
                 exec_name = rep->at(0)->get("rep", "").asString();
             } //else
@@ -2837,5 +2842,6 @@ void TxnRestDB::commitTransaction()
 }
 
 TxnRestDB::~TxnRestDB() {
+    cout << pthread_self() << " Destroying ref!" << endl;
     curl_global_cleanup();
 }
