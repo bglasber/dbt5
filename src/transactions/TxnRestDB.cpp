@@ -1993,7 +1993,7 @@ void TxnRestDB::execute( int clientId, const TTradeResultFrame2Input *pIn,
                 osSQL.clear();
                 osSQL.str("");
                 osSQL << "SELECT h_t_id, h_qty, h_price FROM holding ";
-                osSQL << "WHERE h_ca_id = " << pIn->acct_id << " AND s_s_symb = '";
+                osSQL << "WHERE h_ca_id = " << pIn->acct_id << " AND h_s_symb = '";
                 osSQL << pIn->symbol << "' ORDER BY h_dts DESC";
                 hArr = sendQuery( clientId, osSQL.str().c_str() );
             } else { //is_lifo
