@@ -2365,6 +2365,14 @@ void TxnRestDB::execute( int clientId, const TTradeStatusFrame1Input *pIn,
 	cout << "Trade_Status Frame 1 Done" << endl;
 }
 
+bool replace(std::string& str, const std::string& from, const std::string& to) {
+    size_t start_pos = str.find(from);
+    if(start_pos == std::string::npos)
+        return false;
+    str.replace(start_pos, from.length(), to);
+    return true;
+}
+
 void TxnRestDB::execute( int clientId, const TTradeUpdateFrame1Input *pIn,
                          TTradeUpdateFrame1Output *pOut ) {
 	cout << "Trade_Update Frame 1 Starting" << endl;
@@ -2386,14 +2394,12 @@ void TxnRestDB::execute( int clientId, const TTradeUpdateFrame1Input *pIn,
             string exec_name = tArr->at(0)->get("t_exec_name", "").asString();
             osSQL.clear();
             osSQL.str("");
+
+			
             if( exec_name.find(" X ") != string::npos ) {
-                osSQL << "SELECT REPLACE( '" << exec_name << "', ' X ', ' ' ) as rep";
-                std::vector<Json::Value *> *rep = sendQuery( clientId, osSQL.str().c_str() );
-                exec_name = rep->at(0)->get("rep", "").asString();
+				replace( exec_name, " X ", " " );
             } else {
-                osSQL << "SELECT REPLACE( '" << exec_name << "', ' ', ' X ' ) as rep";
-                std::vector<Json::Value *> *rep = sendQuery( clientId, osSQL.str().c_str() );
-                exec_name = rep->at(0)->get("rep", "").asString();
+				replace( exec_name, "  ", " X " );
             } //else
 
             osSQL.clear();
