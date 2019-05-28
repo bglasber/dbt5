@@ -11,18 +11,14 @@
 using TPCE::TBrokerVolumeFrame1Input;
 using TPCE::TBrokerVolumeFrame1Output;
 
-#define REST_QUERY_URL "http://%s:%s/kronos/rest/query/%d"
+#define REST_QUERY_URL "http://localhost:8080/kronos/rest/query/%d"
 class TxnRestDB {
     CURL *curl;
     TTradeRequest m_TriggeredLimitOrders;
     CBrokerageHouse *bh;
 
 public:
-    string host;
-    string port;
-
     TxnRestDB();
-    ~TxnRestDB();
 
     std::vector<Json::Value *> *sendQuery( int clientId, string query );
 
@@ -115,5 +111,6 @@ public:
 
     void startTransaction();
     void commitTransaction();
+    ~TxnRestDB();
 };
 #endif //__TXN_REST_DB_H__

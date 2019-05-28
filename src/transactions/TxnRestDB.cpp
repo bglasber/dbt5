@@ -137,12 +137,6 @@ void inline TokenizeSmart(const string& str, vector<string>& tokens)
 
 TxnRestDB::TxnRestDB() {
     curl_global_init( CURL_GLOBAL_ALL );
-
-    fstream dbConfigFile;
-    dbConfigFile.open("/tmp/dbt5.conf", ios::in);
-    dbConfigFile >> host >> port;
-    cout << pthread_self() << " got: " << host << ":" << port << endl;
-    dbConfigFile.close();
 }
 
 size_t write_callback( char *ptr, size_t size, size_t nmemb, void *userdata ) {
@@ -175,12 +169,10 @@ std::vector<Json::Value *> *TxnRestDB::sendQuery( int clientId, string query ){
     CURLcode res;
     char url[256];
     char buff[2048];
-    cout << pthread_self() << " Got host: " << host << endl;
-    cout << pthread_self() << " Got host: " << host.c_str() << endl;
     ostringstream os;
     curl = curl_easy_init();
-    snprintf( url, 256, REST_QUERY_URL, host.c_str(), port.c_str(), clientId );
-    cout << pthread_self() << " Sending query to: " << url << endl;
+    snprintf( url, 256, REST_QUERY_URL, clientId );
+    cout << "Sending query to: " << url << endl;
     curl_easy_setopt( curl, CURLOPT_URL, url );
     struct curl_slist *chunk = NULL;
     chunk = curl_slist_append(chunk, "Content-Type: application/json");
@@ -373,7 +365,7 @@ void TxnRestDB::execute( int clientId, const TCustomerPositionFrame2Input *pIn,
     ostringstream osSQL;
     osSQL << "SELECT t_id, t_s_symb, t_qty, st_name, th_dts ";
     osSQL << "FROM ( SELECT t_id as id FROM trade WHERE t_ca_id = " << pIn->acct_id;
-    osSQL << " ORDER BY t_dts DESC LIMIT 10 ) T, trade, trade_history, ";
+    osSQL << " ORDER BY t_dts DESC LIMIT 10 ) as t, trade, trade_history, ";
     osSQL << "status_type WHERE t_id = id AND th_t_id = t_id AND ";
     osSQL << "st_id = th_st_id ORDER BY th_dts DESC LIMIT 30";
 
@@ -1153,7 +1145,6 @@ void TxnRestDB::execute( int clientId, const TSecurityDetailFrame1Input *pIn,
 }
 
 void TxnRestDB::execute( int clientId, const TTradeCleanupFrame1Input *pIn ) {
-    cout << pthread_self() << " has host: " << host << endl;
     cout << "*** Beginning Trade Cleanup TxnRestDB ***" << endl;
     ostringstream osSQL;
 
@@ -1161,7 +1152,6 @@ void TxnRestDB::execute( int clientId, const TTradeCleanupFrame1Input *pIn ) {
     osSQL << "ORDER BY tr_t_id";
 
     cout << "Sending query..." << endl;
-    cout << pthread_self() << " has host: " << host << endl;
     std::vector<Json::Value *> *jsonArr = sendQuery( clientId, osSQL.str().c_str() );
 
     cout << "Done sending query..." << endl;
@@ -1998,14 +1988,14 @@ void TxnRestDB::execute( int clientId, const TTradeResultFrame2Input *pIn,
                 osSQL.clear();
                 osSQL.str("");
                 osSQL << "SELECT h_t_id, h_qty, h_price FROM holding ";
-                osSQL << "WHERE h_ca_id = " << pIn->acct_id << " AND h_s_symb = '";
+                osSQL << "WHERE h_ca_id = " << pIn->acct_id << " AND hs_s_symb = '";
                 osSQL << pIn->symbol << "' ORDER BY h_dts DESC";
                 hArr = sendQuery( clientId, osSQL.str().c_str() );
             } else { //is_lifo
                 osSQL.clear();
                 osSQL.str("");
                 osSQL << "SELECT h_t_id, h_qty, h_price FROM holding ";
-                osSQL << "WHERE h_ca_id = " << pIn->acct_id << " AND h_s_symb = '";
+                osSQL << "WHERE h_ca_id = " << pIn->acct_id << " AND hs_s_symb = '";
                 osSQL << pIn->symbol << "' ORDER BY h_dts ASC";
                 hArr = sendQuery( clientId, osSQL.str().c_str() );
             } //!is_lifo
@@ -2028,7 +2018,7 @@ void TxnRestDB::execute( int clientId, const TTradeResultFrame2Input *pIn,
                     osSQL.str("");
                     osSQL << "UPDATE holding SET h_qty = " << hold_qty - needed_qty << " WHERE ";
                     osSQL << "h_t_id = " << hArr->at(i)->get("h_t_id", "").asInt64() << " AND h_ca_id = ";
-                    osSQL << pIn->acct_id << " AND h_s_symb ='" << pIn->symbol << "'";
+                    osSQL << pIn->acct_id << " AND hs_s_symb ='" << pIn->symbol << "'";
                     res = sendQuery( clientId, osSQL.str().c_str() );
 
                     pOut->buy_value += needed_qty * hold_price;
@@ -2046,7 +2036,7 @@ void TxnRestDB::execute( int clientId, const TTradeResultFrame2Input *pIn,
                     osSQL.str("");
                     osSQL << "DELETE FROM holding WHERE ";
                     osSQL << "h_t_id = " << hArr->at(i)->get("h_t_id", "").asInt64() << " AND h_ca_id = ";
-                    osSQL << pIn->acct_id << " AND h_s_symb ='" << pIn->symbol << "'";
+                    osSQL << pIn->acct_id << " AND hs_s_symb ='" << pIn->symbol << "'";
                     res = sendQuery( clientId, osSQL.str().c_str() );
                     pOut->buy_value += hold_qty * hold_price;
                     pOut->sell_value += hold_qty * pIn->trade_price;
@@ -2089,7 +2079,7 @@ void TxnRestDB::execute( int clientId, const TTradeResultFrame2Input *pIn,
             if( -pIn->hs_qty != pIn->trade_qty ) {
                 osSQL.clear();
                 osSQL.str("");
-                osSQL << "UPDATE holding_summary SET hs_qty = " << (pIn->hs_qty + pIn->trade_qty) << " ";
+                osSQL << "UPDATE holding_summary SET hs_qty = " << (pIn->hs_qty + pIn->trade_qty) << ", ";
                 osSQL << "WHERE hs_ca_id = " << pIn->acct_id << " AND hs_s_symb = '" << pIn->symbol << "'";
                 std::vector<Json::Value *> *res = sendQuery( clientId, osSQL.str().c_str() );
             } //if
@@ -2101,14 +2091,14 @@ void TxnRestDB::execute( int clientId, const TTradeResultFrame2Input *pIn,
                     osSQL.clear();
                     osSQL.str("");
                     osSQL << "SELECT h_t_id, h_qty, h_price FROM holding ";
-                    osSQL << "WHERE h_ca_id = " << pIn->acct_id << " AND h_s_symb = '";
+                    osSQL << "WHERE h_ca_id = " << pIn->acct_id << " AND hs_s_symb = '";
                     osSQL << pIn->symbol << "' ORDER BY h_dts DESC";
                     hArr = sendQuery( clientId, osSQL.str().c_str() );
                 } else { //is_lifo
                     osSQL.clear();
                     osSQL.str("");
                     osSQL << "SELECT h_t_id, h_qty, h_price FROM holding ";
-                    osSQL << "WHERE h_ca_id = " << pIn->acct_id << " AND h_s_symb = '";
+                    osSQL << "WHERE h_ca_id = " << pIn->acct_id << " AND hs_s_symb = '";
                     osSQL << pIn->symbol << "' ORDER BY h_dts ASC";
                     hArr = sendQuery( clientId, osSQL.str().c_str() );
                 } //!is_lifo
@@ -2375,14 +2365,6 @@ void TxnRestDB::execute( int clientId, const TTradeStatusFrame1Input *pIn,
 	cout << "Trade_Status Frame 1 Done" << endl;
 }
 
-bool replace(std::string& str, const std::string& from, const std::string& to) {
-    size_t start_pos = str.find(from);
-    if(start_pos == std::string::npos)
-        return false;
-    str.replace(start_pos, from.length(), to);
-    return true;
-}
-
 void TxnRestDB::execute( int clientId, const TTradeUpdateFrame1Input *pIn,
                          TTradeUpdateFrame1Output *pOut ) {
 	cout << "Trade_Update Frame 1 Starting" << endl;
@@ -2404,12 +2386,14 @@ void TxnRestDB::execute( int clientId, const TTradeUpdateFrame1Input *pIn,
             string exec_name = tArr->at(0)->get("t_exec_name", "").asString();
             osSQL.clear();
             osSQL.str("");
-
-			
             if( exec_name.find(" X ") != string::npos ) {
-				replace( exec_name, " X ", " " );
+                osSQL << "SELECT REPLACE( '" << exec_name << "', ' X ', ' ' ) as rep";
+                std::vector<Json::Value *> *rep = sendQuery( clientId, osSQL.str().c_str() );
+                exec_name = rep->at(0)->get("rep", "").asString();
             } else {
-				replace( exec_name, "  ", " X " );
+                osSQL << "SELECT REPLACE( '" << exec_name << "', ' ', ' X ' ) as rep";
+                std::vector<Json::Value *> *rep = sendQuery( clientId, osSQL.str().c_str() );
+                exec_name = rep->at(0)->get("rep", "").asString();
             } //else
 
             osSQL.clear();
@@ -2848,6 +2832,5 @@ void TxnRestDB::commitTransaction()
 }
 
 TxnRestDB::~TxnRestDB() {
-    cout << pthread_self() << " Destroying ref!" << endl;
     curl_global_cleanup();
 }
