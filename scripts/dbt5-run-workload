@@ -407,9 +407,9 @@ if [ ! "x${DB_HOSTNAME}" = x ] && [ ! "x${DB_HOSTNAME}" = "xlocalhost" ]; then
 fi
 
 # Remove any previous config files
-rm -rf /tmp/dbt5.conf
-echo "${DB_HOSTNAME}" >> /tmp/dbt5.conf
-echo "${DB_PORT}" >> /tmp/dbt5.conf
+# rm -rf /home/ubuntu/dbt5/dbt5.conf
+# echo "${DB_HOSTNAME}" >> /home/ubuntu/dbt5/dbt5.conf
+# echo "${DB_PORT}" >> /home/ubuntu/dbt5/dbt5.conf
 
 # Create a readme file in the output directory and date it.
 date >> ${OUTPUT_DIR}/readme.txt
