@@ -23,6 +23,16 @@ char *TxnRestDB::escape(string s)
     return str;
 }
 
+bool replace(std::string& str, const std::string& from, const std::string& to) {
+    size_t start_pos = str.find(from);
+    if(start_pos == std::string::npos)
+	return false;
+    str.replace(start_pos, from.length(), to);
+    return true;
+}
+	
+
+
 /* These might just be the most ridiculous macros I have ever written
 *  I bet they're fast though
 */
@@ -268,7 +278,7 @@ void TxnRestDB::execute( int clientId, const TCustomerPositionFrame1Input *pIn,
     osSQL << "c_area_1, c_local_1, c_ext_1, c_ctry_2, ";
     osSQL << "c_area_2, c_local_2, c_ext_2, c_ctry_3, ";
     osSQL << "c_area_3, c_local_3, c_ext_3, c_email_1, c_email_2 ";
-    osSQL << "FROM customer where c_id = " << cust_id;
+    osSQL << "FROM customer WHERE c_id = " << cust_id;
     jsonArr = sendQuery( clientId, osSQL.str().c_str() );
 
     pOut->acct_len = jsonArr->size();
@@ -2387,13 +2397,9 @@ void TxnRestDB::execute( int clientId, const TTradeUpdateFrame1Input *pIn,
             osSQL.clear();
             osSQL.str("");
             if( exec_name.find(" X ") != string::npos ) {
-                osSQL << "SELECT REPLACE( '" << exec_name << "', ' X ', ' ' ) as rep";
-                std::vector<Json::Value *> *rep = sendQuery( clientId, osSQL.str().c_str() );
-                exec_name = rep->at(0)->get("rep", "").asString();
+		replace( exec_name, " X ", " " );
             } else {
-                osSQL << "SELECT REPLACE( '" << exec_name << "', ' ', ' X ' ) as rep";
-                std::vector<Json::Value *> *rep = sendQuery( clientId, osSQL.str().c_str() );
-                exec_name = rep->at(0)->get("rep", "").asString();
+	    	replace( exec_name, "  ", " X " );
             } //else
 
             osSQL.clear();
