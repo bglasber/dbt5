@@ -345,7 +345,7 @@ void TxnRestDB::execute( int clientId, const TCustomerPositionFrame1Input *pIn,
 
     //Now retrieve account information
     osSQL << "SELECT ca_id, ca_bal, ";
-    osSQL << "IFNULL(sum(hs_qty * lt_price), 0) as asset_total ";
+    osSQL << "COALESCE(sum(hs_qty * lt_price), 0) as asset_total ";
     osSQL << "FROM customer_account LEFT OUTER JOIN ";
     osSQL << "holding_summary ON hs_ca_id = ca_id, ";
     osSQL << "last_trade WHERE ca_c_id = " << cust_id;
@@ -1547,7 +1547,7 @@ void TxnRestDB::execute( int clientId, const TTradeLookupFrame4Input *pIn,
     osSQL << pIn->acct_id << " AND t_dts >= '";
     osSQL << pIn->trade_dts.year << "-" << pIn->trade_dts.month << "-";
     osSQL << pIn->trade_dts.day << " " << pIn->trade_dts.hour << ":";
-    osSQL << ":" << pIn->trade_dts.minute << ":" << pIn->trade_dts.second << "' ";
+    osSQL << pIn->trade_dts.minute << ":" << pIn->trade_dts.second << "' ";
     osSQL << "ORDER BY t_dts ASC LIMIT 1";
     std::vector<Json::Value *> *jsonArr = sendQuery( clientId, osSQL.str().c_str() );
     pOut->num_trades_found = jsonArr->size();
@@ -1642,6 +1642,7 @@ void TxnRestDB::execute( int clientId, const TTradeOrderFrame2Input *pIn,
 void TxnRestDB::execute( int clientId, const TTradeOrderFrame3Input *pIn,
                          TTradeOrderFrame3Output *pOut ) {
 	cout << "Starting TO block 3" << endl;
+	cout << "requested price: " << pIn->requested_price << endl;
     ostringstream osSQL;
     char *tmpstr;
     char ex_id[10];
@@ -1705,7 +1706,9 @@ void TxnRestDB::execute( int clientId, const TTradeOrderFrame3Input *pIn,
     pOut->type_is_sell = ttArr->at(0)->get("tt_is_sell", "").asBool();
 
     if( pOut->type_is_market ) {
-        pOut->requested_price = pOut->market_price;
+	    pOut->requested_price = pOut->market_price;
+    } else {
+	    pOut->requested_price = pIn->requested_price;
     }
 
     pOut->buy_value = 0;
@@ -1714,7 +1717,7 @@ void TxnRestDB::execute( int clientId, const TTradeOrderFrame3Input *pIn,
     long hs_qty = 0;
 
 
-		osSQL << "Done block" << endl;
+    osSQL << "Done block" << endl;
     osSQL.clear();
     osSQL.str("");
     osSQL << "SELECT hs_qty FROM holding_summary WHERE ";
@@ -1864,6 +1867,7 @@ void TxnRestDB::execute( int clientId, const TTradeOrderFrame4Input *pIn,
                          TTradeOrderFrame4Output *pOut) {
 	cout << "Starting TO frame 4" << endl;
 	cout << "Frame 4 status_id: " << pIn->status_id << endl;
+	cout << "Frame 4 requested_price " << pIn->requested_price << endl;
     ostringstream osSQL;
     char *tmpstr;
     tmpstr = escape( pIn->exec_name );
@@ -1872,10 +1876,21 @@ void TxnRestDB::execute( int clientId, const TTradeOrderFrame4Input *pIn,
     osSQL << "INSERT INTO trade ( t_dts, t_st_id, t_tt_id, t_is_cash, ";
     osSQL << "t_s_symb, t_qty, t_bid_price, t_ca_id, t_exec_name, t_trade_price, ";
     osSQL << "t_chrg, t_comm, t_tax, t_lifo ) VALUES ( now(), '";
-    osSQL << pIn->status_id << "', '" << pIn->trade_type_id << "', " << pIn->is_cash;
+    osSQL << pIn->status_id << "', '" << pIn->trade_type_id << "', ";
+    if( pIn->is_cash == 1 ) {
+	    osSQL << "TRUE";
+    } else {
+	    osSQL << "FALSE";
+    }
     osSQL << ", '" << pIn->symbol << "', " << pIn->trade_qty << ", " << pIn->requested_price;
     osSQL << ", " << pIn->acct_id << ", '" << tmpstr << "', NULL, " << pIn->charge_amount << ", " << pIn->comm_amount;
-    osSQL << ", 0, " << pIn->is_lifo << ")";
+    osSQL << ", 0, ";
+    if( pIn->is_lifo == 1 ) {
+	    osSQL << "TRUE";
+    } else {
+	    osSQL << "FALSE";
+    }
+    osSQL << ")";
     free( tmpstr );
     std::vector<Json::Value *> *res = sendQuery( clientId, osSQL.str().c_str() );
 
@@ -1885,7 +1900,13 @@ void TxnRestDB::execute( int clientId, const TTradeOrderFrame4Input *pIn,
     osSQL.clear();
     osSQL.str("");
     osSQL << "SELECT t_id FROM trade WHERE t_st_id = '" << pIn->status_id << "' AND ";
-    osSQL << "t_tt_id = '" << pIn->trade_type_id << "' AND t_is_cash = " << pIn->is_cash;
+    osSQL << "t_tt_id = '" << pIn->trade_type_id << "' AND t_is_cash = ";
+    bool is_cash = (pIn->is_cash == 1);
+    if( is_cash ) {
+	    osSQL << "TRUE";
+    } else {
+	    osSQL << "FALSE";
+    }
     osSQL << " AND t_chrg = " << pIn->charge_amount << " AND t_comm = " << pIn->comm_amount;
     osSQL << " ORDER BY t_dts DESC";
     std::vector<Json::Value *> *tArr = sendQuery( clientId, osSQL.str().c_str() );
@@ -2126,7 +2147,7 @@ void TxnRestDB::execute( int clientId, const TTradeResultFrame2Input *pIn,
                         osSQL.str("");
                         osSQL << "UPDATE holding SET h_qty = " << hold_qty + needed_qty << " WHERE ";
                         osSQL << "h_t_id = " << hArr->at(i)->get("h_t_id", "").asInt64() << " AND h_ca_id = ";
-                        osSQL << pIn->acct_id << " AND hs_s_symb ='" << pIn->symbol << "'";
+                        osSQL << pIn->acct_id << " AND h_s_symb ='" << pIn->symbol << "'";
                         res = sendQuery( clientId, osSQL.str().c_str() );
 
                         pOut->sell_value += needed_qty * hold_price;
@@ -2144,7 +2165,7 @@ void TxnRestDB::execute( int clientId, const TTradeResultFrame2Input *pIn,
                         osSQL.str("");
                         osSQL << "DELETE FROM holding WHERE ";
                         osSQL << "h_t_id = " << hArr->at(i)->get("h_t_id", "").asInt64() << " AND h_ca_id = ";
-                        osSQL << pIn->acct_id << " AND hs_s_symb ='" << pIn->symbol << "'";
+                        osSQL << pIn->acct_id << " AND h_s_symb ='" << pIn->symbol << "'";
                         res = sendQuery( clientId, osSQL.str().c_str() );
 
                         hold_qty = -hold_qty;
@@ -2302,7 +2323,7 @@ void TxnRestDB::execute( int clientId, const TTradeResultFrame6Input *pIn,
         osSQL << pIn->trade_dts.year << "-" << pIn->trade_dts.month << "-" << pIn->trade_dts.day << " ";
         osSQL << pIn->trade_dts.hour << ":" << pIn->trade_dts.minute << ":" << pIn->trade_dts.second << "', ";
         osSQL << pIn->trade_id << ", " << pIn->se_amount << ", '" << pIn->type_name << " " << pIn->trade_qty;
-        osSQL << " shares of " << + tmpstr << "' )";
+        osSQL << " shares of " << "blah blah" << "' )";
         res = sendQuery( clientId, osSQL.str().c_str() );
         free( tmpstr );
     }
