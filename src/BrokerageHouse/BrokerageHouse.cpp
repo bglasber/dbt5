@@ -80,6 +80,7 @@ void *workerThread(void *data)
 		CTradeResult tradeResult = CTradeResult(&tradeResultDB);
 
 		pThrParam->pBrokerageHouse->logErrorMessage("DB tran objects created...\n");
+		//std::cout << "trade cleanup has host: " << tradeCleanupDB.host << std::endl;
 
 		do {
 			int clientId;
@@ -190,6 +191,7 @@ void *workerThread(void *data)
 					break;
 				case TRADE_CLEANUP:
 					std::cout << "Trade Cleanup transaction for cid: " << clientId << std::endl;
+					//std::cout << "trade cleanup has host: " << tradeCleanupDB.host << std::endl;
 					pThrParam->pBrokerageHouse->logErrorMessage("trade_cleanup transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunTradeCleanup(
 							&(pMessage->TxnInput.TradeCleanupTxnInput),

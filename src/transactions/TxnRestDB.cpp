@@ -23,6 +23,16 @@ char *TxnRestDB::escape(string s)
     return str;
 }
 
+bool replace(std::string& str, const std::string& from, const std::string& to) {
+    size_t start_pos = str.find(from);
+    if(start_pos == std::string::npos)
+	return false;
+    str.replace(start_pos, from.length(), to);
+    return true;
+}
+	
+
+
 /* These might just be the most ridiculous macros I have ever written
 *  I bet they're fast though
 */
@@ -137,11 +147,6 @@ void inline TokenizeSmart(const string& str, vector<string>& tokens)
 
 TxnRestDB::TxnRestDB() {
     curl_global_init( CURL_GLOBAL_ALL );
-
-    fstream dbConfigFile;
-    dbConfigFile.open("/tmp/dbt5.conf", ios::in);
-    dbConfigFile >> host >> port;
-    dbConfigFile.close();
 }
 
 size_t write_callback( char *ptr, size_t size, size_t nmemb, void *userdata ) {
@@ -176,7 +181,7 @@ std::vector<Json::Value *> *TxnRestDB::sendQuery( int clientId, string query ){
     char buff[2048];
     ostringstream os;
     curl = curl_easy_init();
-    snprintf( url, 256, REST_QUERY_URL, host.c_str(), port.c_str(), clientId );
+    snprintf( url, 256, REST_QUERY_URL, clientId );
     cout << "Sending query to: " << url << endl;
     curl_easy_setopt( curl, CURLOPT_URL, url );
     struct curl_slist *chunk = NULL;
@@ -273,7 +278,7 @@ void TxnRestDB::execute( int clientId, const TCustomerPositionFrame1Input *pIn,
     osSQL << "c_area_1, c_local_1, c_ext_1, c_ctry_2, ";
     osSQL << "c_area_2, c_local_2, c_ext_2, c_ctry_3, ";
     osSQL << "c_area_3, c_local_3, c_ext_3, c_email_1, c_email_2 ";
-    osSQL << "FROM customer where c_id = " << cust_id;
+    osSQL << "FROM customer WHERE c_id = " << cust_id;
     jsonArr = sendQuery( clientId, osSQL.str().c_str() );
 
     pOut->acct_len = jsonArr->size();
@@ -2423,9 +2428,9 @@ void TxnRestDB::execute( int clientId, const TTradeUpdateFrame1Input *pIn,
 
 			
             if( exec_name.find(" X ") != string::npos ) {
-				replace( exec_name, " X ", " " );
+		replace( exec_name, " X ", " " );
             } else {
-				replace( exec_name, "  ", " X " );
+	    	replace( exec_name, "  ", " X " );
             } //else
 
             osSQL.clear();
