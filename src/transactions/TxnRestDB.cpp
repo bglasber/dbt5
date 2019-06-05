@@ -230,7 +230,7 @@ void TxnRestDB::execute( int clientId, const TBrokerVolumeFrame1Input *pIn,
     }
     osSQL << " ) AND ";
     osSQL << "sc_name = '" << pIn->sector_name << "' ";
-    osSQL << "GROUP BY b_name ORDER BY 2 DESC";
+    osSQL << "GROUP BY b_name ORDER BY volume DESC";
 
     jsonArr = sendQuery( clientId, osSQL.str().c_str() );
     pOut->list_len = jsonArr->size(); //row_count
