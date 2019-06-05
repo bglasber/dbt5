@@ -912,11 +912,11 @@ void TxnRestDB::execute( int clientId, const TSecurityDetailFrame1Input *pIn,
     //TODO: almost certainly typos in here, not sure about join interations with json, expect errors
     osSQL << "SELECT s_name, co_id, co_name, co_sp_rate, co_ceo, co_desc, co_open_date, co_st_id, ca.ad_line1, ";
     osSQL << "ca.ad_line2, zca.zc_town, zca.zc_div, ca.ad_zc_code, ca.ad_ctry, s_num_out, s_start_date, s_exch_date, ";
-    osSQL << "s_pe, s_52wk_high, s_52wk_high_date, s_52wk_low, s_52wk_low_date, s_dividend, s_yield, zea.zc_div, ";
-    osSQL << "ea.ad_ctry, ea.ad_line1, ea.ad_line2, zea.zc_town, ea.ad_zc_code, ex_close, ex_desc, ex_name, ex_num_symb, ";
-    osSQL << "ex_open FROM security, company, address ca, address ea, zip_code zca, zip_code zea, exchange  WHERE ";
-    osSQL << "s_symb = '" << pIn->symbol << "' AND co_id = s_co_id AND ca.ad_id = co_ad_id AND ea.ad_id = ex_ad_id AND ";
-    osSQL << "ex_id = s_ex_id AND ca.ad_zc_code = zca.zc_code AND ea.ad_zc_code = zea.zc_code";
+    osSQL << "s_pe, s_52wk_high, s_52wk_high_date, s_52wk_low, s_52wk_low_date, s_dividend, s_yield, zea.zc_div2, ";
+    osSQL << "ea.ad_ctry2, ea.ad_line2_1, ea.ad_line2_2, zea.zc_town2, ea.ad_zc_code2, ex_close, ex_desc, ex_name, ex_num_symb, ";
+    osSQL << "ex_open FROM security, company, address ca, address2 ea, zip_code zca, zip_code2 zea, exchange  WHERE ";
+    osSQL << "s_symb = '" << pIn->symbol << "' AND co_id = s_co_id AND ca.ad_id = co_ad_id AND ea.ad_id2 = ex_ad_id AND ";
+    osSQL << "ex_id = s_ex_id AND ca.ad_zc_code = zca.zc_code AND ea.ad_zc_code2 = zea.zc_code2";
     std::vector<Json::Value *> *jsonArr = sendQuery( clientId, osSQL.str().c_str() );
 	cout << "Query sent and read..." << endl;
 
@@ -994,17 +994,17 @@ void TxnRestDB::execute( int clientId, const TSecurityDetailFrame1Input *pIn,
 
     strncpy(pOut->ceo_name, jsonArr->at(0)->get("co_ceo", "").asCString(), cCEO_NAME_len);
     pOut->ceo_name[cCEO_NAME_len] = '\0';
-    strncpy(pOut->co_ad_cty, jsonArr->at(0)->get("ca.ad_ctry", "").asCString(), cAD_CTRY_len);
+    strncpy(pOut->co_ad_cty, jsonArr->at(0)->get("ad_ctry", "").asCString(), cAD_CTRY_len);
     pOut->co_ad_cty[cAD_CTRY_len] = '\0';
-    strncpy(pOut->co_ad_div, jsonArr->at(0)->get("zca.zc_div", "").asCString(), cAD_DIV_len);
+    strncpy(pOut->co_ad_div, jsonArr->at(0)->get("zc_div", "").asCString(), cAD_DIV_len);
     pOut->co_ad_div[cAD_DIV_len] = '\0';
-    strncpy(pOut->co_ad_line1, jsonArr->at(0)->get("ca.ad_line1", "").asCString(), cAD_LINE_len);
+    strncpy(pOut->co_ad_line1, jsonArr->at(0)->get("ad_line1", "").asCString(), cAD_LINE_len);
     pOut->co_ad_line1[cAD_LINE_len] = '\0';
-    strncpy(pOut->co_ad_line2, jsonArr->at(0)->get("ca.ad_line2", "").asCString(), cAD_LINE_len);
+    strncpy(pOut->co_ad_line2, jsonArr->at(0)->get("ad_line2", "").asCString(), cAD_LINE_len);
     pOut->co_ad_line2[cAD_LINE_len] = '\0';
-    strncpy(pOut->co_ad_town, jsonArr->at(0)->get("zca.zc_town", "").asCString(), cAD_TOWN_len);
+    strncpy(pOut->co_ad_town, jsonArr->at(0)->get("zc_town", "").asCString(), cAD_TOWN_len);
     pOut->co_ad_town[cAD_TOWN_len] = '\0';
-    strncpy(pOut->co_ad_zip, jsonArr->at(0)->get("ca.ad_zc_code", "").asCString(), cAD_ZIP_len);
+    strncpy(pOut->co_ad_zip, jsonArr->at(0)->get("ad_zc_code", "").asCString(), cAD_ZIP_len);
     pOut->co_ad_zip[cAD_ZIP_len] = '\0';
     strncpy(pOut->co_desc, jsonArr->at(0)->get("co_desc", "").asCString(), cCO_DESC_len);
     pOut->co_desc[cCO_DESC_len] = '\0';
@@ -1039,17 +1039,17 @@ void TxnRestDB::execute( int clientId, const TSecurityDetailFrame1Input *pIn,
 
     pOut->divid = jsonArr->at(0)->get("s_dividend","").asFloat();
 
-    strncpy(pOut->ex_ad_cty, jsonArr->at(0)->get("ea.ad_ctry","").asCString(), cAD_CTRY_len);
+    strncpy(pOut->ex_ad_cty, jsonArr->at(0)->get("ad_ctry2","").asCString(), cAD_CTRY_len);
     pOut->ex_ad_cty[cAD_CTRY_len] = '\0';
-    strncpy(pOut->ex_ad_div, jsonArr->at(0)->get("zea.zc_div", "").asCString(), cAD_DIV_len);
+    strncpy(pOut->ex_ad_div, jsonArr->at(0)->get("zc_div2", "").asCString(), cAD_DIV_len);
     pOut->ex_ad_div[cAD_DIV_len] = '\0';
-    strncpy(pOut->ex_ad_line1, jsonArr->at(0)->get("ea.ad_line1", "").asCString(), cAD_LINE_len);
+    strncpy(pOut->ex_ad_line1, jsonArr->at(0)->get("ad_line2_1", "").asCString(), cAD_LINE_len);
     pOut->ex_ad_line1[cAD_LINE_len] = '\0';
-    strncpy(pOut->ex_ad_line2, jsonArr->at(0)->get("ea.ad_line2", "").asCString(), cAD_LINE_len);
+    strncpy(pOut->ex_ad_line2, jsonArr->at(0)->get("ad_line2_2", "").asCString(), cAD_LINE_len);
     pOut->ex_ad_line2[cAD_LINE_len] = '\0';
-    strncpy(pOut->ex_ad_town, jsonArr->at(0)->get("zea.zc_town", "").asCString(), cAD_TOWN_len);
+    strncpy(pOut->ex_ad_town, jsonArr->at(0)->get("zc_town2", "").asCString(), cAD_TOWN_len);
     pOut->ex_ad_town[cAD_TOWN_len]  = '\0';
-    strncpy(pOut->ex_ad_zip, jsonArr->at(0)->get("ea.ad_zc_zip", "").asCString(), cAD_ZIP_len);
+    strncpy(pOut->ex_ad_zip, jsonArr->at(0)->get("ad_zc_zip2", "").asCString(), cAD_ZIP_len);
     pOut->ex_ad_zip[cAD_ZIP_len] = '\0';
     pOut->ex_close = jsonArr->at(0)->get("ex_close", "").asFloat();
     sscanf(jsonArr->at(0)->get("s_exch_date", "").asCString(), "%hd-%hd-%hd",
