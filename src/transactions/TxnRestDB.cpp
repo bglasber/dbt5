@@ -348,7 +348,7 @@ void TxnRestDB::execute( int clientId, const TCustomerPositionFrame1Input *pIn,
     osSQL << "holding_summary ON hs_ca_id = ca_id, ";
     osSQL << "last_trade WHERE ca_c_id = " << cust_id;
     osSQL << " AND lt_s_symb = hs_s_symb GROUP BY ";
-    osSQL << "ca_id, ca_bal ORDER BY 3 ASC LIMIT 10";
+    osSQL << "ca_id, ca_bal ORDER BY asset_total ASC LIMIT 10";
 
     jsonArr = sendQuery( clientId, osSQL.str().c_str() );
 
@@ -1300,7 +1300,7 @@ void TxnRestDB::execute( int clientId, const TTradeLookupFrame2Input *pIn,
                          TTradeLookupFrame2Output *pOut ) {
 	cout << "Second frame srtarting..." << endl;
     ostringstream osSQL;
-    osSQL << "SELECT t_bid_price, t_exec_name, t_is_cash, ";
+    osSQL << "SELECT t_dts, t_bid_price, t_exec_name, t_is_cash, ";
     osSQL << "t_id, t_trade_price FROM trade WHERE ";
     osSQL << "t_ca_id = " << pIn->acct_id << " AND ";
     osSQL << "t_dts >= '" << pIn->start_trade_dts.year << "-";
