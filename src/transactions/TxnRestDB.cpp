@@ -1541,7 +1541,7 @@ void TxnRestDB::execute( int clientId, const TTradeLookupFrame4Input *pIn,
 
     ostringstream osSQL;
 
-    osSQL << "SELECT t_id FROM trade WHERE t_ca_id  = ";
+    osSQL << "SELECT t_id, t_dts FROM trade WHERE t_ca_id  = ";
     osSQL << pIn->acct_id << " AND t_dts >= '";
     osSQL << pIn->trade_dts.year << "-" << pIn->trade_dts.month << "-";
     osSQL << pIn->trade_dts.day << " " << pIn->trade_dts.hour << ":";
@@ -2529,7 +2529,7 @@ void TxnRestDB::execute( int clientId, const TTradeUpdateFrame2Input *pIn,
                          TTradeUpdateFrame2Output *pOut ) {
 	cout << "Trade_Update Frame 2 Starting" << endl;
     ostringstream osSQL;
-    osSQL << "SELECT t_bid_price, t_exec_name, t_is_cash, t_id, t_trade_price ";
+    osSQL << "SELECT t_bid_price, t_exec_name, t_is_cash, t_id, t_trade_price, t_dts ";
     osSQL << "FROM trade WHERE t_ca_id = " << pIn->acct_id << " AND t_dts >= '";
     osSQL << pIn->start_trade_dts.year << "-" << pIn->start_trade_dts.month << "-";
     osSQL << pIn->start_trade_dts.day << " " << pIn->start_trade_dts.hour << ":";
