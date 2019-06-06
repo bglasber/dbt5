@@ -2192,7 +2192,7 @@ void TxnRestDB::execute( int clientId, const TTradeResultFrame2Input *pIn,
                 if( -pIn->hs_qty == pIn->trade_qty ) {
                     osSQL.clear();
                     osSQL.str("");
-                    osSQL << "DELETE FROM holding_summary WHERE hs_ca_id = " << pIn->acct_id << ", hs_s_symb = '";
+                    osSQL << "DELETE FROM holding_summary WHERE hs_ca_id = " << pIn->acct_id << " AND hs_s_symb = '";
                     osSQL << pIn->symbol << "'";
                     std::vector<Json::Value *> *res = sendQuery( clientId, osSQL.str().c_str() );
                 } //if
