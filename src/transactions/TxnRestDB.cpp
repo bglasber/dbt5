@@ -2114,14 +2114,14 @@ void TxnRestDB::execute( int clientId, const TTradeResultFrame2Input *pIn,
                 if( pIn->is_lifo ) {
                     osSQL.clear();
                     osSQL.str("");
-                    osSQL << "SELECT h_t_id, h_qty, h_price FROM holding ";
+                    osSQL << "SELECT h_t_id, h_qty, h_price, h_dts FROM holding ";
                     osSQL << "WHERE h_ca_id = " << pIn->acct_id << " AND h_s_symb = '";
                     osSQL << pIn->symbol << "' ORDER BY h_dts DESC";
                     hArr = sendQuery( clientId, osSQL.str().c_str() );
                 } else { //is_lifo
                     osSQL.clear();
                     osSQL.str("");
-                    osSQL << "SELECT h_t_id, h_qty, h_price FROM holding ";
+                    osSQL << "SELECT h_t_id, h_qty, h_price, h_dts FROM holding ";
                     osSQL << "WHERE h_ca_id = " << pIn->acct_id << " AND h_s_symb = '";
                     osSQL << pIn->symbol << "' ORDER BY h_dts ASC";
                     hArr = sendQuery( clientId, osSQL.str().c_str() );
