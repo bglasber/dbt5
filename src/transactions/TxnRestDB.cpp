@@ -153,11 +153,18 @@ size_t write_callback( char *ptr, size_t size, size_t nmemb, void *userdata ) {
     //TODO: how does this work with multiple items?
     Json::Reader reader;
     Json::Value *val = new Json::Value();
+    char *tmpbuf = (char *) malloc( size * nmemb +1 );
+    memset( tmpbuf, '\0', size * nmemb + 1 );
+    memcpy( tmpbuf, ptr, size * nmemb );
+    cout << "Read " << tmpbuf << endl;
+    free( tmpbuf );
     reader.parse( ptr, ptr + (size * nmemb), *val );
+    cout << "Read OK." << endl;
     std::vector<Json::Value *> *arr = new std::vector<Json::Value *>();
     if( !val->isArray() ) {
         cout << "Not an array..." << endl;
     } else {
+	cout << "Think array has: " << val->size() << " items!" << endl;
         for( unsigned i = 0; i < val->size(); i++ ) {
             arr->push_back( new Json::Value((*val)[i]) );
         }
@@ -1691,7 +1698,7 @@ void TxnRestDB::execute( int clientId, const TTradeOrderFrame3Input *pIn,
     osSQL.clear();
     osSQL.str("");
     osSQL << "SELECT lt_price FROM last_trade WHERE lt_s_symb = '";
-    osSQL << pOut->symbol << "'";
+    osSQL << pOut->symbol << "' AND 1=1";
     std::vector<Json::Value *> *ltArr = sendQuery( clientId, osSQL.str().c_str() );
     pOut->market_price = ltArr->at(0)->get("lt_price", "").asDouble();
 
