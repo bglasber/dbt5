@@ -913,17 +913,15 @@ void TxnRestDB::execute( int clientId, const TSecurityDetailFrame1Input *pIn,
     ostringstream osSQL;
 
     //Unrolled sproc
-    //TODO: might be missing some out fields...
 
 	cout << "starting security detail..." << endl;
-    //TODO: almost certainly typos in here, not sure about join interations with json, expect errors
-    osSQL << "SELECT s_name, co_id, co_name, co_sp_rate, co_ceo, co_desc, co_open_date, co_st_id, ca.ad_line1, ";
-    osSQL << "ca.ad_line2, zca.zc_town, zca.zc_div, ca.ad_zc_code, ca.ad_ctry, s_num_out, s_start_date, s_exch_date, ";
-    osSQL << "s_pe, s_52wk_high, s_52wk_high_date, s_52wk_low, s_52wk_low_date, s_dividend, s_yield, zea.zc_div2, ";
-    osSQL << "ea.ad_ctry2, ea.ad_line2_1, ea.ad_line2_2, zea.zc_town2, ea.ad_zc_code2, ex_close, ex_desc, ex_name, ex_num_symb, ";
-    osSQL << "ex_open FROM security, company, address ca, address2 ea, zip_code zca, zip_code2 zea, exchange  WHERE ";
-    osSQL << "s_symb = '" << pIn->symbol << "' AND co_id = s_co_id AND ca.ad_id = co_ad_id AND ea.ad_id2 = ex_ad_id AND ";
-    osSQL << "ex_id = s_ex_id AND ca.ad_zc_code = zca.zc_code AND ea.ad_zc_code2 = zea.zc_code2";
+    osSQL << "SELECT s_name, co_id, co_name, co_sp_rate, co_ceo, co_desc, co_open_date, co_st_id, address.ad_line1, ";
+    osSQL << "address.ad_line2, zip_code.zc_town, zip_code.zc_div, address.ad_zc_code, address.ad_ctry, s_num_out, s_start_date, s_exch_date, ";
+    osSQL << "s_pe, s_52wk_high, s_52wk_high_date, s_52wk_low, s_52wk_low_date, s_dividend, s_yield, zip_code2.zc_div2, ";
+    osSQL << "address2.ad_ctry2, address2.ad_line2_1, address2.ad_line2_2, zip_code2.zc_town2, address2.ad_zc_code2, ex_close, ex_desc, ex_name, ex_num_symb, ";
+    osSQL << "ex_open FROM security, company, address, address2, zip_code, zip_code2, exchange  WHERE ";
+    osSQL << "s_symb = '" << pIn->symbol << "' AND co_id = s_co_id AND address.ad_id = co_ad_id AND address2.ad_id2 = ex_ad_id AND ";
+    osSQL << "ex_id = s_ex_id AND address.ad_zc_code = zip_code.zc_code AND address2.ad_zc_code2 = zip_code2.zc_code2";
     std::vector<Json::Value *> *jsonArr = sendQuery( clientId, osSQL.str().c_str() );
 	cout << "Query sent and read..." << endl;
 
