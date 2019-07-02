@@ -1773,14 +1773,14 @@ void TxnRestDB::execute( int clientId, const TTradeOrderFrame3Input *pIn,
             if( pIn->is_lifo ) {
                 osSQL.clear();
                 osSQL.str("");
-                osSQL << "SELECT h_qty, h_price FROM holding WHERE ";
+                osSQL << "SELECT h_qty, h_price, h_dts FROM holding WHERE ";
                 osSQL << "h_ca_id = " << pIn->acct_id << " AND h_s_symb = '";
                 osSQL << pOut->symbol << "' ORDER BY h_dts DESC";
                 hold_list = sendQuery( clientId, osSQL.str().c_str() );
             } else {
                 osSQL.clear();
                 osSQL.str("");
-                osSQL << "SELECT h_qty, h_price FROM holding WHERE ";
+                osSQL << "SELECT h_qty, h_price, h_dts FROM holding WHERE ";
                 osSQL << "h_ca_id = " << pIn->acct_id << " AND h_s_symb = '";
                 osSQL << pOut->symbol << "' ORDER BY h_dts ASC";
                 hold_list = sendQuery( clientId, osSQL.str().c_str() );
