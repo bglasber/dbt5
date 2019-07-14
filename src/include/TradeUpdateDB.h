@@ -21,7 +21,7 @@ class CTradeUpdateDB : public TxnRestDB, public CTradeUpdateDBInterface
 {
     public:
         //CTradeUpdateDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
-        CTradeUpdateDB(CDBConnection *pDBConn) : TxnRestDB() {};
+        CTradeUpdateDB(CBrokerageHouse *bh, CDBConnection *pDBConn) : TxnRestDB( bh ) {};
         ~CTradeUpdateDB() {};
 
         virtual void DoTradeUpdateFrame1(

@@ -1,5 +1,6 @@
 #include <curl/curl.h>
 #include <sstream>
+#include <chrono>
 #include "TxnRestDB.h"
 #include "TxnHarnessStructs.h"
 #include "TxnHarnessSendToMarket.h"
@@ -69,9 +70,6 @@ char *TxnRestDB::escape(string s)
 
 bool inline check_count(int should, int is, const char *file, int line) {
     if (should != is) {
-        cout << "*** array length (" << is <<
-            ") does not match expections (" << should << "): " << file <<
-            ":" << line << endl;
         return false;
     }
     return true;
@@ -138,33 +136,34 @@ void inline TokenizeSmart(const string& str, vector<string>& tokens)
     }
 }
 
-TxnRestDB::TxnRestDB() {
+TxnRestDB::TxnRestDB( CBrokerageHouse *bh ) {
+    this->bh = bh;
+    this->t= NULL;
     curl_global_init( CURL_GLOBAL_ALL );
 }
+
+TxnRestDB::TxnRestDB( CMEESUTtest *t ) {
+    this->bh = NULL;
+    this->t = t;
+    curl_global_init( CURL_GLOBAL_ALL );
+}
+
 
 size_t write_callback( char *ptr, size_t size, size_t nmemb, void *userdata ) {
     //Strictly speaking, they return an array of JsonObjects, which correspond
     //to the rows. I'm not sure how to read this yet, but given that I killed
     //tembo yet again, I'm going to leave it.
-    cout << "In callback..." << endl;
-    cout << "Ptr: " << ptr << endl;
-    cout << "Size: " << size << endl;
-    cout << "Num Members: " << nmemb << endl;
     //TODO: how does this work with multiple items?
     Json::Reader reader;
     Json::Value *val = new Json::Value();
     char *tmpbuf = (char *) malloc( size * nmemb +1 );
     memset( tmpbuf, '\0', size * nmemb + 1 );
     memcpy( tmpbuf, ptr, size * nmemb );
-    cout << "Read " << tmpbuf << endl;
     free( tmpbuf );
     reader.parse( ptr, ptr + (size * nmemb), *val );
-    cout << "Read OK." << endl;
     std::vector<Json::Value *> *arr = new std::vector<Json::Value *>();
     if( !val->isArray() ) {
-        cout << "Not an array..." << endl;
     } else {
-	cout << "Think array has: " << val->size() << " items!" << endl;
         for( unsigned i = 0; i < val->size(); i++ ) {
             arr->push_back( new Json::Value((*val)[i]) );
         }
@@ -182,7 +181,6 @@ std::vector<Json::Value *> *TxnRestDB::sendQuery( int clientId, string query ){
     ostringstream os;
     curl = curl_easy_init();
     snprintf( url, 256, REST_QUERY_URL, clientId );
-    cout << "Sending query to: " << url << endl;
     curl_easy_setopt( curl, CURLOPT_URL, url );
     struct curl_slist *chunk = NULL;
     chunk = curl_slist_append(chunk, "Content-Type: application/json");
@@ -194,15 +192,26 @@ std::vector<Json::Value *> *TxnRestDB::sendQuery( int clientId, string query ){
     //Have the write callback set this ptr to the allocated data
     std::vector<Json::Value *> *resultArr = NULL;
     strncpy( buff, os.str().c_str(), 2048 );
-    cout << "Sending Query: " << buff << endl;
     curl_easy_setopt( curl, CURLOPT_POSTFIELDS, buff );
     curl_easy_setopt( curl, CURLOPT_WRITEFUNCTION, write_callback );
     curl_easy_setopt( curl, CURLOPT_WRITEDATA, (void *) (&resultArr) );
     curl_easy_setopt( curl, CURLOPT_HTTPHEADER, chunk );
+
+
+    auto started = std::chrono::high_resolution_clock::now();
     res = curl_easy_perform( curl );
-    cout << "Query sent!" << endl;
+    auto ended = std::chrono::high_resolution_clock::now();
+    ostringstream os2;
+    os2 << "Query execution time: \"" << os.str() << "\": " << std::chrono::duration_cast<std::chrono::microseconds>(ended-started).count() << endl;
+    if( bh != NULL ) {
+	    bh->logErrorMessage( os2.str() );
+    } else if( t != NULL ) {
+	    cout << "MEESUT Query execution time: \"" << os.str() << "\": " << std::chrono::duration_cast<std::chrono::microseconds>(ended-started).count() << endl;
+    } else {
+	    cout << "DMSUT Query execution time: \"" << os.str() << "\": " << std::chrono::duration_cast<std::chrono::microseconds>(ended-started).count() << endl;
+    }
+
     if( res != CURLE_OK ) {
-        cout << "Error sending query:" << res << endl;
         //ERROR, handle this!
     }
     //Pull out results, return
@@ -316,7 +325,6 @@ void TxnRestDB::execute( int clientId, const TCustomerPositionFrame1Input *pIn,
     strncpy(pOut->c_ext_3, jsonArr->at(0)->get("c_ext_3", "").asCString(), cEXT_len);
     pOut->c_ext_3[cEXT_len] = '\0';
 
-	cout << "Done third block" << endl;
 	
 
     strncpy(pOut->c_f_name, jsonArr->at(0)->get("c_f_name", "").asCString(), cF_NAME_len);
@@ -333,16 +341,12 @@ void TxnRestDB::execute( int clientId, const TCustomerPositionFrame1Input *pIn,
     strncpy(pOut->c_local_3, jsonArr->at(0)->get("c_local_3", "").asCString(), cLOCAL_len);
     pOut->c_local_3[cLOCAL_len] = '\0';
 
-	cout << "Done fourth block" << endl;
 
     strncpy(pOut->c_m_name, jsonArr->at(0)->get("c_m_name", "").asCString(), cM_NAME_len);
     pOut->c_m_name[cM_NAME_len] = '\0';
-	cout << "c_m_name done" << endl;
     strncpy(pOut->c_st_id, jsonArr->at(0)->get("c_st_id", "").asCString(), cST_ID_len);
     pOut->c_st_id[cST_ID_len] = '\0';
-	cout << "c_st_name done" << endl;
     pOut->c_tier = jsonArr->at(0)->get("c_tier", "").asInt64();
-	cout << "Done reading stuff" << endl;
     //TODO: free jsonArr
     //Reset stringstream
     osSQL.clear();
@@ -364,13 +368,11 @@ void TxnRestDB::execute( int clientId, const TCustomerPositionFrame1Input *pIn,
         pOut->cash_bal[i] = jsonArr->at(i)->get("ca_bal", "").asDouble();
         pOut->asset_total[i] = jsonArr->at(i)->get("asset_total", "").asDouble();
     }
-   cout << "Done First Frame..." << endl;
 }
 
 void TxnRestDB::execute( int clientId, const TCustomerPositionFrame2Input *pIn,
                          TCustomerPositionFrame2Output *pOut )
 {
-	cout << "Starting Second Frame" << endl;
 
     ostringstream osSQL;
     osSQL << "SELECT t_id, t_s_symb, t_qty, st_name, th_dts ";
@@ -405,7 +407,6 @@ void TxnRestDB::execute( int clientId, const TCustomerPositionFrame2Input *pIn,
                 &pOut->hist_dts[i].second);
     }
 
-	cout << "Done second frame" << endl;
     //TODO: free jsonArr
 }
 
@@ -732,9 +733,7 @@ void TxnRestDB::execute( int clientId, const TMarketFeedFrame1Input *pIn,
     //I'm not sure how much this matters to the spec
     long rows_updated = 0;
     long rows_sent = 0;
-	cout << "max_feed_len: " << max_feed_len << endl;
     for( unsigned int i = 0; i < max_feed_len; i++ ) { 
-	cout << "market_feed iter " << i << endl;
         ostringstream osSQL;
         osSQL << "UPDATE last_trade SET lt_price = ";
         osSQL << pIn->Entries[i].price_quote << ", ";
@@ -751,7 +750,6 @@ void TxnRestDB::execute( int clientId, const TMarketFeedFrame1Input *pIn,
         jsonArr = sendQuery( clientId, osSQL.str().c_str() );
         //TODO: free jsonArr
        
-	cout << "After count";
 
         rows_updated += jsonArr->at(0)->get( "rows_modified", "" ).asInt64();
 
@@ -771,17 +769,14 @@ void TxnRestDB::execute( int clientId, const TMarketFeedFrame1Input *pIn,
         //TODO: free jsonArr
         osSQL.clear();
         osSQL.str("");
-	cout << "market_feed entering second inner loop" << endl;
 
         for( unsigned j = 0; j < jsonArr->size(); j++ ) {
-		cout << "market_feed second inner loop running... " << j << endl;
             osSQL << "UPDATE trade SET t_dts = now(), ";
             osSQL << "t_st_id = '" << pIn->StatusAndTradeType.status_submitted;
             osSQL << "' WHERE t_id = ";
             osSQL << jsonArr->at(j)->get("tr_t_id", "").asInt64();
 
             std::vector<Json::Value *> *arr = sendQuery( clientId, osSQL.str().c_str() );
-		cout << "market_feed second inner loop block 1 done" << endl;
             //TODO: free arr
             osSQL.clear();
             osSQL.str("");
@@ -797,11 +792,9 @@ void TxnRestDB::execute( int clientId, const TMarketFeedFrame1Input *pIn,
             osSQL.clear();
             osSQL.str("");
 
-		cout << "market_feed second inner loop block 2 done" << endl;
 
             //TODO: free arr
 
-            	cout << "Inserting into trade history... " << endl;
             osSQL << "INSERT INTO trade_history( th_t_id, th_dts, th_st_id ) VALUES ( ";
             osSQL << jsonArr->at(j)->get( "tr_t_id", "").asInt64();
             osSQL << ", now()";
@@ -812,44 +805,33 @@ void TxnRestDB::execute( int clientId, const TMarketFeedFrame1Input *pIn,
             osSQL.str("");
             //TODO: free arr
             //
-		cout << "market_feed second inner loop block 3 done" << endl;
 
             TTradeRequest req;
             req.price_quote = jsonArr->at(j)->get( "tr_bid_price", "" ).asFloat();
-		cout << "market_feed price quote" << endl;
             req.trade_id = jsonArr->at(j)->get( "tr_t_id", "" ).asInt64();
-		cout << "market_feed trade id" << endl;
             req.trade_qty = jsonArr->at(j)->get( "tr_qty", "" ).asInt();
-		cout << "market_feed trade_qty" << endl;
             strncpy( req.symbol, pIn->Entries[i].symbol, cSYMBOL_len );
-		cout << "market_feed symbol" << endl;
             req.symbol[cSYMBOL_len] = '\0';
             strncpy(req.trade_type_id, jsonArr->at(j)->get( "tr_tt_id", "").asCString(), cTT_ID_len);
-		cout << "market_feed trade_type" << endl;
             req.trade_type_id[cTT_ID_len] = '\0';
 
 
             vec.push_back( req );
-		cout << "market_feed iteration "<< j << " Done" << endl;
         }
-	cout << "market_feed finished inner loop for iter: " << i  << endl;
         bool bSent;
         for( unsigned j = 0; j < vec.size(); j++ ) {
             //Send to market
             bSent = pMarketExchange->SendToMarketFromFrame( vec.at(j) );
         }
-	cout << "market_feed done iter " << i << endl;
         rows_sent += vec.size();
 
     }
     pOut->send_len = rows_sent; //Is this right?
     pOut->num_updated = rows_updated; //This is an upper bound, not the exact value
-	cout << "Done market_feed" << endl;
 }
 
 void TxnRestDB::execute( int clientId, const TMarketWatchFrame1Input *pIn,
                          TMarketWatchFrame1Output *pOut ) {
-	cout << "Starting Market_Watch..." << endl;
     ostringstream osSQL;
     if( pIn->c_id != 0 ) {
         osSQL << "SELECT wi_s_symb as symb FROM watch_item, watch_list ";
@@ -865,7 +847,6 @@ void TxnRestDB::execute( int clientId, const TMarketWatchFrame1Input *pIn,
     }
     std::vector<Json::Value *> *cursor = sendQuery( clientId, osSQL.str().c_str() );
 
-	cout << "Query sent OK" << endl;
     float old_mkt_cap = 0;
     float new_mkt_cap = 0;
     float pct_change = 0;
@@ -874,15 +855,12 @@ void TxnRestDB::execute( int clientId, const TMarketWatchFrame1Input *pIn,
         osSQL.str("");
         osSQL << "SELECT lt_price FROM last_trade WHERE lt_s_symb = '";
         osSQL << cursor->at(j)->get("symb", "").asString() << "'";
-	cout << "Read symb..." << endl;;
         std::vector<Json::Value *> *lt_res = sendQuery( clientId, osSQL.str().c_str() );
-	cout << "Sent lt query..." << endl;
         osSQL.clear();
         osSQL.str("");
         osSQL << "SELECT s_num_out FROM security WHERE s_symb = '";
         osSQL << cursor->at(j)->get("symb","").asString() << "'";
         std::vector<Json::Value *> *sec_res = sendQuery( clientId, osSQL.str().c_str() );
-	cout << "Sent out sec query..." << endl;
         osSQL.clear();
         osSQL.str("");
         //TODO: verify this is the right date format for mysql comparisons
@@ -891,20 +869,16 @@ void TxnRestDB::execute( int clientId, const TMarketWatchFrame1Input *pIn,
         osSQL << "AND dm_date = '" << pIn->start_day.year << "-";
         osSQL << pIn->start_day.month << "-" << pIn->start_day.day << "'";
         std::vector<Json::Value *> *dm_res = sendQuery( clientId, osSQL.str().c_str() );
-	cout << "dm query sent!" << endl;
 
         old_mkt_cap += sec_res->at(0)->get("s_num_out","").asFloat() * dm_res->at(0)->get("dm_close", "").asFloat();
         new_mkt_cap += sec_res->at(0)->get("s_num_out","").asFloat() * lt_res->at(0)->get("lt_price", "").asFloat();
-	cout << "Done reading s_num_out, dm_close, and lt_price" << endl;
     }
-	cout << "Survived first block..." << endl;
     if( old_mkt_cap != 0 ) {
         pct_change = 100 * (new_mkt_cap/old_mkt_cap-1);
     } else {
         pct_change = 0;
     }
     pOut->pct_change = pct_change;
-	cout << "Market_Watch Done!" << endl;
 
 }
 
@@ -914,7 +888,6 @@ void TxnRestDB::execute( int clientId, const TSecurityDetailFrame1Input *pIn,
 
     //Unrolled sproc
 
-	cout << "starting security detail..." << endl;
     osSQL << "SELECT s_name, co_id, co_name, co_sp_rate, co_ceo, co_desc, co_open_date, co_st_id, address.ad_line1, ";
     osSQL << "address.ad_line2, zip_code.zc_town, zip_code.zc_div, address.ad_zc_code, address.ad_ctry, s_num_out, s_start_date, s_exch_date, ";
     osSQL << "s_pe, s_52wk_high, s_52wk_high_date, s_52wk_low, s_52wk_low_date, s_dividend, s_yield, zip_code2.zc_div2, ";
@@ -923,7 +896,6 @@ void TxnRestDB::execute( int clientId, const TSecurityDetailFrame1Input *pIn,
     osSQL << "s_symb = '" << pIn->symbol << "' AND co_id = s_co_id AND address.ad_id = co_ad_id AND address2.ad_id2 = ex_ad_id AND ";
     osSQL << "ex_id = s_ex_id AND address.ad_zc_code = zip_code.zc_code AND address2.ad_zc_code2 = zip_code2.zc_code2";
     std::vector<Json::Value *> *jsonArr = sendQuery( clientId, osSQL.str().c_str() );
-	cout << "Query sent and read..." << endl;
 
     osSQL.clear();
     osSQL.str("");
@@ -931,7 +903,6 @@ void TxnRestDB::execute( int clientId, const TSecurityDetailFrame1Input *pIn,
     osSQL << "cp_co_id = " << jsonArr->at(0)->get("co_id", "").asInt64() << " AND ";
     osSQL << "co_id = cp_comp_co_id AND in_id = cp_in_id LIMIT 3";
     std::vector<Json::Value *> *namesArr = sendQuery( clientId, osSQL.str().c_str() );
-	cout << "Second query sent!" << endl;
 
     osSQL.str("");
     osSQL << "SELECT fi_year, fi_qtr, fi_qtr_start_date, fi_revenue, fi_net_earn, fi_basic_eps, fi_dilut_eps, "; 
@@ -940,7 +911,6 @@ void TxnRestDB::execute( int clientId, const TSecurityDetailFrame1Input *pIn,
     std::vector<Json::Value *> *fiArr = sendQuery( clientId, osSQL.str().c_str() );
     long fin_len = fiArr->size();
 
-	cout << "Third query sent!" << endl;
 
     osSQL.clear();
     osSQL.str("");
@@ -950,7 +920,6 @@ void TxnRestDB::execute( int clientId, const TSecurityDetailFrame1Input *pIn,
     std::vector<Json::Value *> *dmArr = sendQuery( clientId, osSQL.str().c_str() );
     long day_len = dmArr->size();
 	
-	cout << "Fourth query sent!" << endl;
     
     osSQL.clear();
     osSQL.str("");
@@ -958,7 +927,6 @@ void TxnRestDB::execute( int clientId, const TSecurityDetailFrame1Input *pIn,
     osSQL << pIn->symbol << "'";
     std::vector<Json::Value *> *ltArr = sendQuery( clientId, osSQL.str().c_str() );
 
-	cout << "Fifth query sent!" << endl;
 
     std::vector<Json::Value *> *newsArr;
     if( pIn->access_lob_flag ) {
@@ -975,27 +943,21 @@ void TxnRestDB::execute( int clientId, const TSecurityDetailFrame1Input *pIn,
         newsArr = sendQuery( clientId, osSQL.str().c_str() );
     }
     long news_len = newsArr->size();
-	cout << "sixth query sent" << endl;
 
     pOut->fin_len = fin_len;
     pOut->day_len = day_len;
     pOut->news_len = news_len;
 
-	cout << "Starting to read data..." << endl;
     pOut->s52_wk_high = jsonArr->at(0)->get("s_52wk_high", "").asFloat();
-	cout << "Read high" <<endl;
     sscanf(jsonArr->at(0)->get("s_52wk_high_date","").asCString(), "%hd-%hd-%hd",
             &pOut->s52_wk_high_date.year,
             &pOut->s52_wk_high_date.month,
             &pOut->s52_wk_high_date.day);
-	cout << "read high date" << endl;
     pOut->s52_wk_low = jsonArr->at(0)->get("s_52wk_low", "").asFloat();
-	cout << "read low" << endl;
     sscanf(jsonArr->at(0)->get("s_52wk_low_date", "").asCString(), "%hd-%hd-%hd",
             &pOut->s52_wk_low_date.year,
             &pOut->s52_wk_low_date.month,
             &pOut->s52_wk_low_date.day);
-	cout << "block 1 done" << endl;
 
     strncpy(pOut->ceo_name, jsonArr->at(0)->get("co_ceo", "").asCString(), cCEO_NAME_len);
     pOut->ceo_name[cCEO_NAME_len] = '\0';
@@ -1017,7 +979,6 @@ void TxnRestDB::execute( int clientId, const TSecurityDetailFrame1Input *pIn,
     pOut->co_name[cCO_NAME_len] = '\0';
     strncpy(pOut->co_st_id, jsonArr->at(0)->get("co_st_id", "").asCString(), cST_ID_len);
     pOut->co_st_id[cST_ID_len] = '\0';
-	cout << "block 2 done" << endl;
 
     for( unsigned j = 0; j < namesArr->size(); j++ ) {
         strncpy(pOut->cp_co_name[j], namesArr->at(j)->get("co_name", "").asCString(), cCO_NAME_len);
@@ -1026,7 +987,6 @@ void TxnRestDB::execute( int clientId, const TSecurityDetailFrame1Input *pIn,
         pOut->cp_in_name[j][cIN_NAME_len] = '\0';
     }
 
-	cout << "block 3 done" << endl;
 
 
     for( unsigned j = 0; j < dmArr->size(); j++ ) {
@@ -1040,7 +1000,6 @@ void TxnRestDB::execute( int clientId, const TSecurityDetailFrame1Input *pIn,
         pOut->day[j].vol = dmArr->at(j)->get("dm_vol", "").asFloat();
     }
 
-	cout << "block 4 done" << endl;
 
     pOut->divid = jsonArr->at(0)->get("s_dividend","").asFloat();
 
@@ -1068,7 +1027,6 @@ void TxnRestDB::execute( int clientId, const TSecurityDetailFrame1Input *pIn,
     pOut->ex_num_symb = jsonArr->at(0)->get("ex_num_symb", "").asInt();
     pOut->ex_open = jsonArr->at(0)->get("ex_open", "").asFloat();
 
-	cout << "block 5 done" << endl;
 
     for( unsigned i = 0; i < fiArr->size(); i++ ) {
         pOut->fin[i].year = fiArr->at(i)->get( "fi_year", "" ).asInt();
@@ -1089,24 +1047,18 @@ void TxnRestDB::execute( int clientId, const TSecurityDetailFrame1Input *pIn,
         pOut->fin[i].out_dilut = fiArr->at(i)->get("fi_out_dilut", "").asFloat();
     }
 
-	cout << "block 6 done" << endl;
 
     pOut->last_open = ltArr->at(0)->get("lt_open_price","").asFloat();
     pOut->last_price = ltArr->at(0)->get("lt_price", "").asFloat();
     pOut->last_vol = ltArr->at(0)->get("lt_vol", "").asInt();
-	cout << "lts done" << endl;
 
     for( unsigned j = 0; j < newsArr->size(); j++ ) {
-	cout << "Starting loop..." << endl;
         strncpy(pOut->news[j].item, newsArr->at(j)->get("ni_item", "").asCString(), cNI_ITEM_len);
-	cout << "copied ni_item" << endl;
         pOut->news[j].item[cNI_ITEM_len] = '\0';
-	cout << "ni_dts: " << newsArr->at(j)->get( "ni_dts", "" ).asInt64() << endl;
 	time_t t = newsArr->at(j)->get( "ni_dts", "" ).asInt64() / 1000;
 	struct tm *ti = localtime( &t );
 	char buff[56];
 	strftime( buff, 56, "%F %T", ti );
-	cout << "strftime: " << buff << endl;
         sscanf( buff, "%hd-%hd-%hd %hd:%hd:%hd",
                 &pOut->news[j].dts.year,
                 &pOut->news[j].dts.month,
@@ -1114,20 +1066,16 @@ void TxnRestDB::execute( int clientId, const TSecurityDetailFrame1Input *pIn,
                 &pOut->news[j].dts.hour,
                 &pOut->news[j].dts.minute,
                 &pOut->news[j].dts.second);
-	cout << "done with dts" << endl;
         strncpy(pOut->news[j].src, newsArr->at(j)->get("ni_source", "").asCString(), cNI_SOURCE_len);
         pOut->news[j].src[cNI_SOURCE_len] = '\0';
         strncpy(pOut->news[j].auth, newsArr->at(j)->get("ni_author", "").asCString(), cNI_AUTHOR_len);
         pOut->news[j].auth[cNI_AUTHOR_len] = '\0';
-	cout << "done with author" << endl;
         strncpy(pOut->news[j].headline, newsArr->at(j)->get("ni_headline", "").asCString(), cNI_HEADLINE_len);
         pOut->news[j].headline[cNI_HEADLINE_len] = '\0';
         strncpy(pOut->news[j].summary, newsArr->at(j)->get("ni_summary","").asCString(), cNI_SUMMARY_len);
         pOut->news[j].summary[cNI_SUMMARY_len] = '\0';
-	cout << "done with summary" << endl;
 
     }
-	cout << "block 7 done" << endl;
     sscanf(jsonArr->at(0)->get("co_open_date", "").asCString(), "%hd-%hd-%hd",
             &pOut->open_date.year,
             &pOut->open_date.month,
@@ -1144,7 +1092,6 @@ void TxnRestDB::execute( int clientId, const TSecurityDetailFrame1Input *pIn,
             &pOut->start_date.day);
     pOut->yield = jsonArr->at(0)->get("s_yield", "").asFloat();
 
-	cout << "done!" << endl;
     //TODO: free jsonArr
     //TODO: free dmArr
     //TODO: free ltArr
@@ -1153,16 +1100,13 @@ void TxnRestDB::execute( int clientId, const TSecurityDetailFrame1Input *pIn,
 }
 
 void TxnRestDB::execute( int clientId, const TTradeCleanupFrame1Input *pIn ) {
-    cout << "*** Beginning Trade Cleanup TxnRestDB ***" << endl;
     ostringstream osSQL;
 
     osSQL << "SELECT tr_t_id FROM trade_request ";
     osSQL << "ORDER BY tr_t_id";
 
-    cout << "Sending query..." << endl;
     std::vector<Json::Value *> *jsonArr = sendQuery( clientId, osSQL.str().c_str() );
 
-    cout << "Done sending query..." << endl;
     //All of these now()'s are the same in the spec,
     //I'm not sure if it matters tho
     for( unsigned i = 0; i < jsonArr->size(); i++ ) {
@@ -1224,7 +1168,6 @@ void TxnRestDB::execute( int clientId, const TTradeCleanupFrame1Input *pIn ) {
 
 void TxnRestDB::execute( int clientId, const TTradeLookupFrame1Input *pIn,
                          TTradeLookupFrame1Output *pOut ) {
-	cout << "trade lookup start..." << endl;
     pOut->num_found = 0;
     for( int i = 0; i < pIn->max_trades; i++ ) {
         ostringstream osSQL;
@@ -1254,14 +1197,12 @@ void TxnRestDB::execute( int clientId, const TTradeLookupFrame1Input *pIn,
             osSQL << "SELECT ct_amt, ct_dts, ct_name FROM cash_transaction ";
             osSQL << "WHERE ct_t_id = " << pIn->trade_id[i];
             std::vector<Json::Value *> *ctArr = sendQuery( clientId, osSQL.str().c_str() );
-	cout << "Frame 1 DTS sent, reading objects...";
             pOut->trade_info[i].cash_transaction_amount = ctArr->at(0)->get("ct_amt", "").asDouble();
             time_t t = ctArr->at(0)->get( "ct_dts", "" ).asInt64() / 1000;
             struct tm *ti = localtime( &t );
             char buff[56];
 	    memset( buff, '\0', sizeof(buff) );
             strftime( buff, 56, "%F %T", ti );
-	    cout << "Interpreted time: " << buff << endl;
 
             sscanf(buff, "%hd-%hd-%hd %hd:%hd:%hd",
                     &pOut->trade_info[i].cash_transaction_dts.year,
@@ -1298,12 +1239,10 @@ void TxnRestDB::execute( int clientId, const TTradeLookupFrame1Input *pIn,
             }
         }
     }
-	cout << "First frame done..." << endl;
 }
 
 void TxnRestDB::execute( int clientId, const TTradeLookupFrame2Input *pIn,
                          TTradeLookupFrame2Output *pOut ) {
-	cout << "Second frame srtarting..." << endl;
     ostringstream osSQL;
     osSQL << "SELECT t_dts, t_bid_price, t_exec_name, t_is_cash, ";
     osSQL << "t_id, t_trade_price FROM trade WHERE ";
@@ -1356,16 +1295,13 @@ void TxnRestDB::execute( int clientId, const TTradeLookupFrame2Input *pIn,
             osSQL << "SELECT ct_amt, ct_dts, ct_name FROM cash_transaction ";
             osSQL << "WHERE ct_t_id = " << jsonArr->at(i)->get("t_id", "").asInt64();
             std::vector<Json::Value *> *ctArr = sendQuery(1, osSQL.str().c_str() );
-		cout << "Cash transaction done!" << endl;
             pOut->trade_info[i].cash_transaction_amount = ctArr->at(0)->get("ct_amt", "").asDouble();
-		cout << "Done amount" << endl;
 
             time_t t = ctArr->at(0)->get( "ct_dts", "" ).asInt64() / 1000;
             struct tm *ti = localtime( &t );
             char buff[56];
 	    memset( buff, '\0', sizeof(buff) );
             strftime( buff, 56, "%F %T", ti );
-	    cout << "Interpreted time: " << buff << endl;
 
             sscanf( buff, "%hd-%hd-%hd %hd:%hd:%hd",
                 &pOut->trade_info[i].cash_transaction_dts.year,
@@ -1393,7 +1329,6 @@ void TxnRestDB::execute( int clientId, const TTradeLookupFrame2Input *pIn,
             char buff[56];
 	    memset( buff, '\0', sizeof(buff) );
             strftime( buff, 56, "%F %T", ti );
-	    cout << "Interpreted time: " << buff << endl;
 
             sscanf( buff, "%hd-%hd-%hd %hd:%hd:%hd",
               &pOut->trade_info[i].trade_history_dts[j].year,
@@ -1409,13 +1344,11 @@ void TxnRestDB::execute( int clientId, const TTradeLookupFrame2Input *pIn,
         }
 
     }
-	cout << "Done executing frame 2!" << endl;
 }
 
 void TxnRestDB::execute( int clientId, const TTradeLookupFrame3Input *pIn,
                          TTradeLookupFrame3Output *pOut ) {
 
-	cout << "Frame 3 started..." << endl;
     ostringstream osSQL;
     osSQL << "SELECT t_ca_id, t_exec_name, t_is_cash, t_trade_price, ";
     osSQL << "t_qty, t_dts, t_id, t_tt_id FROM trade WHERE t_s_symb = '";
@@ -1442,7 +1375,6 @@ void TxnRestDB::execute( int clientId, const TTradeLookupFrame3Input *pIn,
 	char buff[56];
 	memset( buff, '\0', sizeof(buff) );
 	strftime( buff, 56, "%F %T", ti );
-	cout << "Interpreted time: " << buff << endl;
 
         sscanf( buff, "%hd-%hd-%hd %hd:%hd:%hd",
                 &pOut->trade_info[i].trade_dts.year,
@@ -1456,7 +1388,6 @@ void TxnRestDB::execute( int clientId, const TTradeLookupFrame3Input *pIn,
         pOut->trade_info[i].trade_type[cTT_ID_len] = '\0';
     }
 
-	cout << "Block 1 done!" << endl;
 
     osSQL.clear();
     osSQL.str("");
@@ -1491,7 +1422,6 @@ void TxnRestDB::execute( int clientId, const TTradeLookupFrame3Input *pIn,
 	    char buff[56];
 	    memset( buff, '\0', sizeof(buff) );
 	    strftime( buff, 56, "%F %T", ti );
-	    cout << "Interpreted time: " << buff << endl;
 
             pOut->trade_info[i].cash_transaction_amount = ctArr->at(0)->get("ct_amt", "").asDouble();
             sscanf( buff, "%hd-%hd-%hd %hd:%hd:%hd",
@@ -1507,7 +1437,6 @@ void TxnRestDB::execute( int clientId, const TTradeLookupFrame3Input *pIn,
 
         }
 
-	cout << "Block 2 Done!" << endl;
         osSQL.clear();
         osSQL.str("");
         osSQL << "SELECT th_dts, th_st_id FROM trade_history WHERE th_t_id = ";
@@ -1521,7 +1450,6 @@ void TxnRestDB::execute( int clientId, const TTradeLookupFrame3Input *pIn,
 		char buff[56];
 		memset( buff, '\0', sizeof(buff) );
 		strftime( buff, 56, "%F %T", ti );
-		cout << "Interpreted time: " << buff << endl;
 
 
             sscanf( buff, "%hd-%hd-%hd %hd:%hd:%hd",
@@ -1537,7 +1465,6 @@ void TxnRestDB::execute( int clientId, const TTradeLookupFrame3Input *pIn,
         }
 	osSQL.clear();
 	osSQL.str("");
-	cout << "Done!" << endl;
     }
 }
 
@@ -1576,20 +1503,17 @@ void TxnRestDB::execute( int clientId, const TTradeLookupFrame4Input *pIn,
 
 void TxnRestDB::execute( int clientId, const TTradeOrderFrame1Input *pIn,
                          TTradeOrderFrame1Output *pOut ) {
-	cout << "Starting trade order" << endl;
     ostringstream osSQL;
     osSQL << "SELECT ca_name, ca_b_id, ca_c_id, ca_tax_st FROM ";
     osSQL << "customer_account WHERE ca_id = " << pIn->acct_id;
 
     std::vector<Json::Value *> *jsonArr = sendQuery( clientId, osSQL.str().c_str() );
     pOut->num_found = jsonArr->size();
-    cout << "Number of existing trades: " << jsonArr->size();
     strncpy(pOut->acct_name, jsonArr->at(0)->get("ca_name", "").asCString(), cCA_NAME_len);
     pOut->acct_name[cCA_NAME_len] ='\0';
     pOut->broker_id = jsonArr->at(0)->get("ca_b_id", "").asInt64();
     pOut->cust_id = jsonArr->at(0)->get("ca_c_id", "").asInt64();
     pOut->tax_status = jsonArr->at(0)->get("ca_tax_st", "").asInt();
-    cout << "acct_name: " << pOut->acct_name << ", broker_id: " << pOut->broker_id;
 
     osSQL.clear();
     osSQL.str("");
@@ -1612,12 +1536,10 @@ void TxnRestDB::execute( int clientId, const TTradeOrderFrame1Input *pIn,
     std::vector<Json::Value *> *bArr = sendQuery( clientId, osSQL.str().c_str() );
     strncpy(pOut->broker_name, bArr->at(0)->get("b_name", "").asCString(), cB_NAME_len);
     pOut->broker_name[cB_NAME_len]  ='\0';
-	cout << "Done block one" << endl;
 }
 
 void TxnRestDB::execute( int clientId, const TTradeOrderFrame2Input *pIn,
                          TTradeOrderFrame2Output *pOut ) {
-	cout << "Starting TO frame 2" << endl;
     ostringstream osSQL;
     char *tmpstr;
     tmpstr = escape(pIn->exec_f_name);
@@ -1639,13 +1561,10 @@ void TxnRestDB::execute( int clientId, const TTradeOrderFrame2Input *pIn,
     } else {
         pOut->ap_acl[0] = '\0';
     }
-	cout << "Done TO block 2" << endl;
 }
 
 void TxnRestDB::execute( int clientId, const TTradeOrderFrame3Input *pIn,
                          TTradeOrderFrame3Output *pOut ) {
-	cout << "Starting TO block 3" << endl;
-	cout << "requested price: " << pIn->requested_price << endl;
     ostringstream osSQL;
     char *tmpstr;
     char ex_id[10];
@@ -1692,7 +1611,6 @@ void TxnRestDB::execute( int clientId, const TTradeOrderFrame3Input *pIn,
         pOut->co_name[cCO_NAME_len] = '\0';
     } //symbol
 
-	cout << "Done first block" << endl;
     osSQL.clear();
     osSQL.str("");
     osSQL << "SELECT lt_price FROM last_trade WHERE lt_s_symb = '";
@@ -1853,7 +1771,6 @@ void TxnRestDB::execute( int clientId, const TTradeOrderFrame3Input *pIn,
             pOut->acct_assets = caArr->at(0)->get("ca_bal", "").asDouble();
         }
     }
-    cout << "Going to set status_id" << endl;
 
     if( pOut->type_is_market ) {
         strncpy(pOut->status_id, pIn->st_submitted_id, cTH_ST_ID_len);
@@ -1862,15 +1779,10 @@ void TxnRestDB::execute( int clientId, const TTradeOrderFrame3Input *pIn,
         strncpy(pOut->status_id, pIn->st_pending_id, cTH_ST_ID_len);
         pOut->status_id[cTH_ST_ID_len] = '\0';
     }
-    cout << "Set status_id: " << pOut->status_id << endl;
-    cout << "Done TO frame 3" << endl;
 }
 
 void TxnRestDB::execute( int clientId, const TTradeOrderFrame4Input *pIn,
                          TTradeOrderFrame4Output *pOut) {
-	cout << "Starting TO frame 4" << endl;
-	cout << "Frame 4 status_id: " << pIn->status_id << endl;
-	cout << "Frame 4 requested_price " << pIn->requested_price << endl;
     ostringstream osSQL;
     char *tmpstr;
     tmpstr = escape( pIn->exec_name );
@@ -1914,7 +1826,6 @@ void TxnRestDB::execute( int clientId, const TTradeOrderFrame4Input *pIn,
     osSQL << " ORDER BY t_dts DESC";
     std::vector<Json::Value *> *tArr = sendQuery( clientId, osSQL.str().c_str() );
     long trade_id = tArr->at(0)->get("t_id", "").asInt64();
-	cout << "Half way through frame 4" << endl;
 
     if( !pIn->type_is_market ) {
         osSQL.clear();
@@ -1931,12 +1842,10 @@ void TxnRestDB::execute( int clientId, const TTradeOrderFrame4Input *pIn,
     osSQL << trade_id << ", now(), '" << pIn->status_id << "')";
     res = sendQuery( clientId, osSQL.str().c_str() );
     pOut->trade_id = trade_id;
-	cout << "Done TO frame 4" << endl;
 }
 
 void TxnRestDB::execute( int clientId, const TTradeResultFrame1Input *pIn,
                          TTradeResultFrame1Output *pOut ) {
-	cout << "Trade_Result Frame 1" << endl;
     ostringstream osSQL;
     osSQL << "SELECT t_ca_id, t_tt_id, t_s_symb, t_qty, t_chrg, t_lifo, t_is_cash ";
     osSQL << "FROM trade WHERE t_id = " << pIn->trade_id;
@@ -1973,13 +1882,11 @@ void TxnRestDB::execute( int clientId, const TTradeResultFrame1Input *pIn,
     } else {
         pOut->hs_qty = hsArr->at(0)->get("hs_qty", "").asInt();
     }
-	cout << "Trade_Result Frame 1 Done" << endl;
 }
 
 void TxnRestDB::execute( int clientId, const TTradeResultFrame2Input *pIn,
                              TTradeResultFrame2Output *pOut ) {
 
-	cout << "Trade_Result Frame 2 Start" << endl;
     pOut->buy_value = 0;
     pOut->sell_value = 0;
     int needed_qty = pIn->trade_qty;
@@ -2217,14 +2124,12 @@ void TxnRestDB::execute( int clientId, const TTradeResultFrame2Input *pIn,
                     &pOut->trade_dts.minute,
                     &pOut->trade_dts.second);
 
-	cout << "Trade_Result Frame 2 End" << endl;
 
 }
 
 void TxnRestDB::execute( int clientId, const TTradeResultFrame3Input *pIn,
                          TTradeResultFrame3Output *pOut ) {
 
-	cout << "Trade_Result Frame 3 Start" << endl;
     ostringstream osSQL;
     osSQL << "SELECT sum(tx_rate) as tx FROM taxrate WHERE tx_id IN ( ";
     osSQL << "SELECT cx_tx_id FROM customer_taxrate WHERE cx_c_id = " << pIn->cust_id << " )";
@@ -2236,13 +2141,11 @@ void TxnRestDB::execute( int clientId, const TTradeResultFrame3Input *pIn,
     osSQL << "UPDATE trade SET t_tax = " << pOut->tax_amount << " WHERE t_id = " << pIn->trade_id;
     std::vector<Json::Value *> *res = sendQuery( clientId, osSQL.str().c_str() );
 
-	cout << "Trade_Result Frame 3 End" << endl;
 }
 
 void TxnRestDB::execute( int clientId, const TTradeResultFrame4Input *pIn,
                          TTradeResultFrame4Output *pOut ) {
 
-	cout << "Trade_Result Frame 4 Start" << endl;
     ostringstream osSQL;
     osSQL << "SELECT s_ex_id, s_name FROM security WHERE s_symb = '" << pIn->symbol;
     osSQL << "'";
@@ -2264,11 +2167,9 @@ void TxnRestDB::execute( int clientId, const TTradeResultFrame4Input *pIn,
     osSQL << " LIMIT 1";
     std::vector<Json::Value *> *crArr = sendQuery( clientId, osSQL.str().c_str() );
     pOut->comm_rate = crArr->at(0)->get("cr_rate", "").asDouble();
-	cout << "Trade_Result Frame 4 End" << endl;
 }
 
 void TxnRestDB::execute( int clientId, const TTradeResultFrame5Input *pIn ) {
-	cout << "Trade_Result Frame 5 Start" << endl;
     ostringstream osSQL;
     osSQL << "UPDATE trade SET t_comm = " << pIn->comm_amount << ", ";
     osSQL << "t_dts = '" << pIn->trade_dts.year << "-" << pIn->trade_dts.month;
@@ -2292,12 +2193,10 @@ void TxnRestDB::execute( int clientId, const TTradeResultFrame5Input *pIn ) {
     osSQL << "UPDATE broker SET b_comm_total = b_comm_total + " << pIn->comm_amount << ", ";
     osSQL << "b_num_trades = b_num_trades + 1 WHERE b_id = " << pIn->broker_id;
     res = sendQuery( clientId, osSQL.str().c_str() );
-	cout << "Trade_Result Frame 5 End" << endl;
 }
 
 void TxnRestDB::execute( int clientId, const TTradeResultFrame6Input *pIn,
                          TTradeResultFrame6Output *pOut ) {
-	cout << "Trade_Result Frame 6 Start" << endl;
     ostringstream osSQL;
     char cash_type[40];
     if( pIn->trade_is_cash ) {
@@ -2336,12 +2235,10 @@ void TxnRestDB::execute( int clientId, const TTradeResultFrame6Input *pIn,
     osSQL << "SELECT ca_bal FROM customer_account WHERE ca_id = " << pIn->acct_id;
     std::vector<Json::Value *> *jsonArr = sendQuery( clientId, osSQL.str().c_str() );
     pOut->acct_bal = jsonArr->at(0)->get("ca_bal", "").asDouble();
-	cout << "Trade_Result Frame 6 End" << endl;
 }
 
 void TxnRestDB::execute( int clientId, const TTradeStatusFrame1Input *pIn,
                          TTradeStatusFrame1Output *pOut ) {
-	cout << "Trade_Status frame 1 starting..." << endl;
     ostringstream osSQL;
     osSQL << "SELECT t_id, t_dts, st_name, tt_name, t_s_symb, t_qty, t_exec_name, t_chrg, ";
     osSQL << "s_name, ex_name FROM trade, status_type, trade_type, security, exchange WHERE ";
@@ -2391,7 +2288,6 @@ void TxnRestDB::execute( int clientId, const TTradeStatusFrame1Input *pIn,
     pOut->cust_l_name[cL_NAME_len] = '\0';
     strncpy(pOut->broker_name, jsonArr->at(0)->get( "b_name", "" ).asCString(), cB_NAME_len);
     pOut->broker_name[cB_NAME_len] = '\0';
-	cout << "Trade_Status Frame 1 Done" << endl;
 }
 
 bool replace(std::string& str, const std::string& from, const std::string& to) {
@@ -2404,17 +2300,13 @@ bool replace(std::string& str, const std::string& from, const std::string& to) {
 
 void TxnRestDB::execute( int clientId, const TTradeUpdateFrame1Input *pIn,
                          TTradeUpdateFrame1Output *pOut ) {
-	cout << "Trade_Update Frame 1 Starting" << endl;
 
     ostringstream osSQL;
     pOut->num_found = 0;
     pOut->num_updated = 0;
 
-	cout << "Trade_Update Frame 1 outside first loop" << endl;
     for( int i = 0; i < pIn->max_trades; i++ ) {
-	cout << "Trade_Update Frame 1 first loop" << i << endl;
         if( pOut->num_updated < pIn->max_updates ) {
- 		cout << "Trade_Update Frame 1 in max updates" << endl;
             osSQL << "SELECT t_exec_name FROM trade WHERE ";
             osSQL << "t_id = " << pIn->trade_id[i];
             std::vector<Json::Value *> *tArr = sendQuery( clientId, osSQL.str().c_str() );
@@ -2439,7 +2331,6 @@ void TxnRestDB::execute( int clientId, const TTradeUpdateFrame1Input *pIn,
             pOut->num_updated++;
             osSQL.clear();
             osSQL.str("");
-		cout << "Trade_Update Frame 1 done max updates" << endl;
         } //if
         osSQL << "SELECT t_bid_price, t_exec_name, t_is_cash, tt_is_mrkt, t_trade_price ";
         osSQL << "FROM trade, trade_type WHERE t_id = " << pIn->trade_id[i] << " AND t_tt_id = tt_id";
@@ -2451,7 +2342,6 @@ void TxnRestDB::execute( int clientId, const TTradeUpdateFrame1Input *pIn,
         pOut->trade_info[i].is_market = tArr->at(0)->get("tt_is_mrkt", "").asInt();
         pOut->trade_info[i].trade_price = tArr->at(0)->get("t_trade_price", "").asDouble();
 
-	cout << "Trade_Update Frame 1 done first block" << endl;
         osSQL.clear();
         osSQL.str("");
         osSQL << "SELECT se_amt, se_cash_due_date, se_cash_type FROM settlement WHERE se_t_id = ";
@@ -2467,12 +2357,10 @@ void TxnRestDB::execute( int clientId, const TTradeUpdateFrame1Input *pIn,
         pOut->trade_info[i].settlement_cash_type[cSE_CASH_TYPE_len] = '\0';
 
 
-	cout << "Trade_Update Frame 1 done second block" << endl;
         osSQL.clear();
         osSQL.str("");
         if( pOut->trade_info[i].is_cash ) {
 
-		cout << "Trade_Update Frame 1 is_cash" << endl;
             osSQL << "SELECT ct_amt, ct_dts, ct_name FROM cash_transaction WHERE ct_t_id = ";
             osSQL << pIn->trade_id[i];
             std::vector<Json::Value *> *ctArr = sendQuery( clientId, osSQL.str().c_str() );
@@ -2497,7 +2385,6 @@ void TxnRestDB::execute( int clientId, const TTradeUpdateFrame1Input *pIn,
             osSQL.clear();
             osSQL.str("");
 
-		cout << "Trade_Update Frame 1 done is_cash" << endl;
         } //if
 
         osSQL << "SELECT th_dts, th_st_id FROM trade_history WHERE th_t_id = ";
@@ -2525,14 +2412,11 @@ void TxnRestDB::execute( int clientId, const TTradeUpdateFrame1Input *pIn,
         } //for
         osSQL.clear();
         osSQL.str("");
-	cout << "Trade_Update Frame 1 done loop " << i << endl;
     } //for
-	cout << "Trade_Update Frame 1 Ending" << endl ;
 }
 
 void TxnRestDB::execute( int clientId, const TTradeUpdateFrame2Input *pIn,
                          TTradeUpdateFrame2Output *pOut ) {
-	cout << "Trade_Update Frame 2 Starting" << endl;
     ostringstream osSQL;
     osSQL << "SELECT t_bid_price, t_exec_name, t_is_cash, t_id, t_trade_price, t_dts ";
     osSQL << "FROM trade WHERE t_ca_id = " << pIn->acct_id << " AND t_dts >= '";
@@ -2551,18 +2435,14 @@ void TxnRestDB::execute( int clientId, const TTradeUpdateFrame2Input *pIn,
         strncpy( pOut->trade_info[i].exec_name, jsonArr->at(i)->get("t_exec_name", "").asCString(),
                  cEXEC_NAME_len );
         pOut->trade_info[i].exec_name[cEXEC_NAME_len] = '\0';
-	cout << "Trade_Update Frame 2 Before is_cash" << endl;
 	bool is_cash = jsonArr->at(i)->get("t_is_cash", "").asBool();
         pOut->trade_info[i].is_cash = is_cash ? 1 : 0;
         pOut->trade_info[i].trade_id = jsonArr->at(i)->get("t_id", "").asInt64();
         pOut->trade_info[i].trade_price = jsonArr->at(i)->get("t_trade_price", "").asDouble();
     } //for
-	cout << "Trade_Update Frame 2 after first loop" << endl;
 
     for( unsigned i = 0; i < jsonArr->size(); i++ ) {
-	cout << "Trade_Update Frame 2 in second loop " << i << endl;
         if( pOut->num_updated < pIn->max_updates ) {
-		cout << "Trade_Update Frame 2 not max updates" << endl;
             osSQL.clear();
             osSQL.str("");
             osSQL << "SELECT se_cash_type FROM settlement WHERE se_t_id = " << pOut->trade_info[i].trade_id;
@@ -2586,7 +2466,6 @@ void TxnRestDB::execute( int clientId, const TTradeUpdateFrame2Input *pIn,
             osSQL << "UPDATE settlement SET se_cash_type = '" << buff << "' WHERE se_t_id = ";
             osSQL << pOut->trade_info[i].trade_id;
             pOut->num_updated++;
-		cout << "Trade_Update Frame 2 done not max updates" << endl;
         } //if
 
         osSQL.clear();
@@ -2602,10 +2481,8 @@ void TxnRestDB::execute( int clientId, const TTradeUpdateFrame2Input *pIn,
         strncpy(pOut->trade_info[i].settlement_cash_type, seArr->at(0)->get("se_cash_type", "").asCString(),
                  cSE_CASH_TYPE_len );
         pOut->trade_info[i].settlement_cash_type[cSE_CASH_TYPE_len] = '\0';
-	cout << "Trade_Update Frame 2 done with se" << endl;
 
         if( pOut->trade_info[i].is_cash ) {
-		cout << "Trade_Update Frame 2 is_cash 2" << endl;
             osSQL.clear();
             osSQL.str("");
             osSQL << "SELECT ct_amt, ct_dts, ct_name FROM cash_transaction WHERE ct_t_id = ";
@@ -2631,9 +2508,7 @@ void TxnRestDB::execute( int clientId, const TTradeUpdateFrame2Input *pIn,
             strncpy( pOut->trade_info[i].cash_transaction_name, ctArr->at(0)->get("ct_name", "").asCString(),
                             cCT_NAME_len );
             pOut->trade_info[i].cash_transaction_name[cCT_NAME_len] = '\0';
-		cout << "Trade_Update Frame 2 done with is_cash 2" << endl;
         }
-	cout << "Trade_Update Frame 2 start with th" << endl;
         osSQL.clear();
         osSQL.str("");
         osSQL << "SELECT th_dts, th_st_id FROM trade_history WHERE th_t_id = ";
@@ -2658,16 +2533,12 @@ void TxnRestDB::execute( int clientId, const TTradeUpdateFrame2Input *pIn,
                     thArr->at(j)->get("th_st_id", "").asCString(), cTH_ST_ID_len);
             pOut->trade_info[i].trade_history_status_id[j][cTH_ST_ID_len] = '\0';
         }
-		cout << "Trade_Update Frame 2 done with th" << endl;
-	cout << "Trade_Update Frame 2 done with iter " << i << endl;
     }//for
-	cout << "Trade_Update Frame 2 End" << endl;
 }
 
 void TxnRestDB::execute( int clientId, const TTradeUpdateFrame3Input *pIn,
                          TTradeUpdateFrame3Output *pOut ) {
 
-    cout << "Trade_Update Frame 3 Start" << endl;
     ostringstream osSQL;
     osSQL << "SELECT t_ca_id, t_exec_name, t_is_cash, t_trade_price, ";
     osSQL << "t_qty, s_name, t_dts, t_id, t_tt_id, tt_name FROM ";
@@ -2686,24 +2557,15 @@ void TxnRestDB::execute( int clientId, const TTradeUpdateFrame3Input *pIn,
     pOut->num_found = jsonArr->size();
     pOut->num_updated = 0;
 
-	cout << "Trade_Update Frame 3 outside first loop..." << endl;
     for( unsigned i = 0; i < jsonArr->size(); i++ ) {
-	cout << "Trade_Update Frame 3 first loop iter " << i  << endl;
-	cout << "Trade_Update Frame 3 before t_ca_id" << endl;
         pOut->trade_info[i].acct_id = jsonArr->at(i)->get("t_ca_id", "").asInt64();
-	cout << "Trade_Update Frame 3 t_ca_id" << endl;
-	cout << "t_exec_name is string: " << jsonArr->at(i)->get("t_exec_name", "").isString() << endl;
-	cout << "t_exec_name: " << jsonArr->at(i)->get("t_exec_name", "") << endl;
         strncpy( pOut->trade_info[i].exec_name, jsonArr->at(i)->get("t_exec_name", "").asCString(), cEXEC_NAME_len );
-	cout << "Trade_Update Frame 3 before is_cash" << endl;
 	bool is_cash = jsonArr->at(i)->get("t_is_cash", "").asBool();
 	pOut->trade_info[i].is_cash = is_cash ? 1 : 0 ;
-	cout << "Trade_Update Frame 3 after is_cash" << endl;
         pOut->trade_info[i].quantity = jsonArr->at(i)->get("t_qty" ,"").asInt64();
         strncpy( pOut->trade_info[i].s_name, jsonArr->at(i)->get("s_name", "").asCString(),
                  cS_NAME_len );
         pOut->trade_info[i].s_name[cS_NAME_len] = '\0';
-	cout << "Trade_Update Frame 3 Before Time..." << endl;
         {
                 time_t t = jsonArr->at(i)->get( "t_dts", "" ).asInt64() / 1000;
                 struct tm *ti = localtime( &t );
@@ -2718,7 +2580,6 @@ void TxnRestDB::execute( int clientId, const TTradeUpdateFrame3Input *pIn,
                         &pOut->trade_info[i].trade_dts.second );
 
         }
-	cout << "Trade_Update Frame 3 After time" << endl;
                 pOut->trade_info[i].trade_id = jsonArr->at(i)->get("t_id", "").asInt64();
         strncpy( pOut->trade_info[i].trade_type, jsonArr->at(i)->get("t_tt_id", "").asCString(),
                  cTT_ID_len );
@@ -2727,10 +2588,8 @@ void TxnRestDB::execute( int clientId, const TTradeUpdateFrame3Input *pIn,
                  cTT_NAME_len );
         pOut->trade_info[i].type_name[cTT_NAME_len] = '\0';
     }
-	cout << "Trade_Update Frame 3 done first loop..." << endl;
 
     for( unsigned i = 0; i < jsonArr->size(); i++ ) {
-	cout << "Trade_Update Frame 3 in second loop " << i << endl;
         osSQL.clear();
         osSQL.str("");
         osSQL << "SELECT se_amt, se_cash_due_date, se_cash_type FROM settlement WHERE se_t_id = ";
@@ -2743,11 +2602,8 @@ void TxnRestDB::execute( int clientId, const TTradeUpdateFrame3Input *pIn,
                 &pOut->trade_info[i].settlement_cash_due_date.day);
         strncpy( pOut->trade_info[i].settlement_cash_type, seArr->at(0)->get("se_cash_type", "").asCString(),
                  cSE_CASH_TYPE_len );
-	cout << "Trade_Update Frame 3 done with se" << endl;
         if( pOut->trade_info[i].is_cash ) {
-		cout << "Trade_Update Frame 3 is cash" << endl;
             if( pOut->num_updated < pIn->max_updates ) {
-		cout << "Trade_Update Frame 3 not max updates" << endl;
                 osSQL.clear();
                 osSQL.str("");
                 osSQL << "SELECT ct_name FROM cash_transaction WHERE ct_t_id = ";
@@ -2771,7 +2627,6 @@ void TxnRestDB::execute( int clientId, const TTradeUpdateFrame3Input *pIn,
                 osSQL << "ct_t_id = " << pOut->trade_info[i].trade_id;
                 std::vector<Json::Value *> *res = sendQuery( clientId, osSQL.str().c_str() );
                 pOut->num_updated++;
-		cout << "Trade_Update Frame 3 done not max updates" << endl;
             }
             osSQL.clear();
             osSQL.str("");
@@ -2796,16 +2651,13 @@ void TxnRestDB::execute( int clientId, const TTradeUpdateFrame3Input *pIn,
            strncpy( pOut->trade_info[i].cash_transaction_name, ctArr->at(0)->get("ct_name", "").asCString(),
                      cCT_NAME_len );
             pOut->trade_info[i].cash_transaction_name[cCT_NAME_len] = '\0';
-		cout << "Trade_Update Frame 3 done is cash" << endl;
         } //is_cash
         osSQL.clear();
         osSQL.str("");
         osSQL << "SELECT th_dts, th_st_id FROM trade_history WHERE th_t_id = ";
         osSQL << pOut->trade_info[i].trade_id << " ORDER BY th_dts ASC LIMIT 3";
         std::vector<Json::Value *> *thArr = sendQuery( clientId, osSQL.str().c_str() );
-	cout << "Trade_Update Frame 3 outside third loop" << endl;
         for( unsigned j = 0; j < thArr->size(); j++ ) {
-		cout << "Trade_Update Frame 3 third loop " << j << endl;
             {
                     time_t t = thArr->at(j)->get( "th_dts", "" ).asInt64() / 1000;
                     struct tm *ti = localtime( &t );
@@ -2823,11 +2675,9 @@ void TxnRestDB::execute( int clientId, const TTradeUpdateFrame3Input *pIn,
             strncpy(pOut->trade_info[i].trade_history_status_id[j],
             thArr->at(j)->get("th_st_id", "").asCString(), cTH_ST_ID_len);
             pOut->trade_info[i].trade_history_status_id[j][cTH_ST_ID_len] = '\0';
-		cout << "Trade_Update Frame 3 third loop done " << j << endl;
         } //for j
     } //for i
 
-    cout << "Trade_Update Frame 3 End" << endl;
 }
 void TxnRestDB::reconnect()
 {

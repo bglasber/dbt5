@@ -5,20 +5,23 @@
 #include "TxnHarnessStructs.h"
 #include "TxnHarnessSendToMarket.h"
 
+#include "MEESUTtest.h"
 #include "BrokerageHouse.h"
 #include "DBT5Consts.h"
 #include "json.h"
 using TPCE::TBrokerVolumeFrame1Input;
 using TPCE::TBrokerVolumeFrame1Output;
 
-#define REST_QUERY_URL "http://54.90.19.251:8080/kronos/rest/query/%d"
+#define REST_QUERY_URL "http://100.25.170.216:8080/kronos/rest/query/%d"
 class TxnRestDB {
     CURL *curl;
     TTradeRequest m_TriggeredLimitOrders;
     CBrokerageHouse *bh;
+    CMEESUTtest *t;
 
 public:
-    TxnRestDB();
+    TxnRestDB( CBrokerageHouse *bh );
+    TxnRestDB( CMEESUTtest *t );
 
     std::vector<Json::Value *> *sendQuery( int clientId, string query );
 

@@ -19,7 +19,8 @@ class CMarketFeedDB : public TxnRestDB, public CMarketFeedDBInterface
 {
     public:
         //CMarketFeedDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
-        CMarketFeedDB(CDBConnection *pDBConn) : TxnRestDB() {};
+        CMarketFeedDB(CBrokerageHouse *bh, CDBConnection *pDBConn) : TxnRestDB(bh) {};
+        CMarketFeedDB(CMEESUTtest *t, CDBConnection *pDBConn) : TxnRestDB(t) {};
         ~CMarketFeedDB() {};
 
         virtual void DoMarketFeedFrame1(

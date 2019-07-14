@@ -19,7 +19,7 @@ class CSecurityDetailDB : public TxnRestDB, public CSecurityDetailDBInterface
 {
     public:
         //CSecurityDetailDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
-        CSecurityDetailDB(CDBConnection *pDBConn) : TxnRestDB() {};
+        CSecurityDetailDB(CBrokerageHouse *bh, CDBConnection *pDBConn) : TxnRestDB(bh) {};
         ~CSecurityDetailDB() {};
 
         virtual void DoSecurityDetailFrame1(

@@ -21,7 +21,7 @@ class CTradeLookupDB : public TxnRestDB, public CTradeLookupDBInterface
 {
     public:
         //CTradeLookupDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
-        CTradeLookupDB(CDBConnection *pDBConn) : TxnRestDB() {};
+        CTradeLookupDB(CBrokerageHouse *bh, CDBConnection *pDBConn) : TxnRestDB(bh) {};
         ~CTradeLookupDB() {};
 
         virtual void DoTradeLookupFrame1(

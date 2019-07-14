@@ -21,7 +21,8 @@ class CTradeResultDB : public TxnRestDB, public CTradeResultDBInterface
 {
     public:
         //CTradeResultDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
-        CTradeResultDB(CDBConnection *pDBConn) : TxnRestDB() {};
+        CTradeResultDB(CBrokerageHouse *bh, CDBConnection *pDBConn) : TxnRestDB(bh) {};
+        CTradeResultDB(CMEESUTtest *t, CDBConnection *pDBConn) : TxnRestDB(t) {};
         ~CTradeResultDB() {};
 
         virtual void DoTradeResultFrame1(

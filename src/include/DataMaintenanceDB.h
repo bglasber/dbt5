@@ -12,6 +12,7 @@
 
 #include <TxnHarnessDBInterface.h>
 
+#include "DMSUTtest.h"
 #include "TxnBaseDB.h"
 #include "TxnRestDB.h"
 
@@ -19,7 +20,7 @@ class CDataMaintenanceDB : public TxnRestDB, public CDataMaintenanceDBInterface
 {
     public:
         //CDataMaintenanceDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
-        CDataMaintenanceDB(CDBConnection *pDBConn) : TxnRestDB() {};
+        CDataMaintenanceDB(CBrokerageHouse *bh, CDBConnection *pDBConn) : TxnRestDB(bh) {};
         ~CDataMaintenanceDB() {};
 
         void DoDataMaintenanceFrame1(int clientId, const TDataMaintenanceFrame1Input *pIn);
