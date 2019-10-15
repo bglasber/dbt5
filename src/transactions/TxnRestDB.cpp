@@ -259,6 +259,15 @@ void TxnRestDB::execute( int clientId, const TBrokerVolumeFrame1Input *pIn,
     }
 
     //TODO: Free JSON
+    ostringstream os2;
+    os2 << "Transaction Mix: BV" << endl;
+    if( bh != NULL ) {
+       bh->logErrorMessage( os2.str() );
+    } else if( t != NULL ) {
+        cout << "MEESUT Transaction Mix: BV" << endl;
+    } else {
+       cout << "DMSUT Transaction Mix: BV" << endl;
+    }
 }
 
 void TxnRestDB::execute( int clientId, const TCustomerPositionFrame1Input *pIn,
@@ -367,6 +376,16 @@ void TxnRestDB::execute( int clientId, const TCustomerPositionFrame1Input *pIn,
         pOut->acct_id[i] = jsonArr->at(i)->get("ca_id", "").asInt64();
         pOut->cash_bal[i] = jsonArr->at(i)->get("ca_bal", "").asDouble();
         pOut->asset_total[i] = jsonArr->at(i)->get("asset_total", "").asDouble();
+    }
+
+    ostringstream os2;
+    os2 << "Transaction Mix: CP" << endl;
+    if( bh != NULL ) {
+	    bh->logErrorMessage( os2.str() );
+    } else if( t != NULL ) {
+	    cout << "MEESUT Transaction Mix: CP" << endl;
+    } else {
+	    cout << "DMSUT Transaction Mix: CP" << endl;
     }
 }
 
@@ -720,6 +739,16 @@ void TxnRestDB::execute( int clientId, const TDataMaintenanceFrame1Input *pIn ) 
         jsonArr = sendQuery( clientId, osSQL.str().c_str() );
         //TODO: free jsonArr
     }
+
+    ostringstream os2;
+    os2 << "Transaction Mix: DM" << endl;
+    if( bh != NULL ) {
+	    bh->logErrorMessage( os2.str() );
+    } else if( t != NULL ) {
+	    cout << "MEESUT Transaction Mix: DM" << endl;
+    } else {
+	    cout << "DMSUT Transaction Mix: DM" << endl;
+    }
 }
 
 void TxnRestDB::execute( int clientId, const TMarketFeedFrame1Input *pIn,
@@ -828,6 +857,16 @@ void TxnRestDB::execute( int clientId, const TMarketFeedFrame1Input *pIn,
     }
     pOut->send_len = rows_sent; //Is this right?
     pOut->num_updated = rows_updated; //This is an upper bound, not the exact value
+
+    ostringstream os2;
+    os2 << "Transaction Mix: MF" << endl;
+    if( bh != NULL ) {
+	    bh->logErrorMessage( os2.str() );
+    } else if( t != NULL ) {
+	    cout << "MEESUT Transaction Mix: MF" << endl;
+    } else {
+	    cout << "DMSUT Transaction Mix: MF" << endl;
+    }
 }
 
 void TxnRestDB::execute( int clientId, const TMarketWatchFrame1Input *pIn,
@@ -879,6 +918,16 @@ void TxnRestDB::execute( int clientId, const TMarketWatchFrame1Input *pIn,
         pct_change = 0;
     }
     pOut->pct_change = pct_change;
+
+    ostringstream os2;
+    os2 << "Transaction Mix: MW" << endl;
+    if( bh != NULL ) {
+	    bh->logErrorMessage( os2.str() );
+    } else if( t != NULL ) {
+	    cout << "MEESUT Transaction Mix: MW" << endl;
+    } else {
+	    cout << "DMSUT Transaction Mix: MW" << endl;
+    }
 
 }
 
@@ -1097,6 +1146,16 @@ void TxnRestDB::execute( int clientId, const TSecurityDetailFrame1Input *pIn,
     //TODO: free ltArr
     //TODO: free fiArr
     //TODO: free newsArr
+    
+    ostringstream os2;
+    os2 << "Transaction Mix: SD" << endl;
+    if( bh != NULL ) {
+	    bh->logErrorMessage( os2.str() );
+    } else if( t != NULL ) {
+	    cout << "MEESUT Transaction Mix: SD" << endl;
+    } else {
+	    cout << "DMSUT Transaction Mix: SD" << endl;
+    }
 }
 
 void TxnRestDB::execute( int clientId, const TTradeCleanupFrame1Input *pIn ) {
@@ -1164,6 +1223,15 @@ void TxnRestDB::execute( int clientId, const TTradeCleanupFrame1Input *pIn ) {
     }
     //TODO: Free jsonArr
 
+    ostringstream os2;
+    os2 << "Transaction Mix: TC" << endl;
+    if( bh != NULL ) {
+	    bh->logErrorMessage( os2.str() );
+    } else if( t != NULL ) {
+	    cout << "MEESUT Transaction Mix: TC" << endl;
+    } else {
+	    cout << "DMSUT Transaction Mix: TC" << endl;
+    }
 }
 
 void TxnRestDB::execute( int clientId, const TTradeLookupFrame1Input *pIn,
@@ -1238,6 +1306,16 @@ void TxnRestDB::execute( int clientId, const TTradeLookupFrame1Input *pIn,
                     '\0';
             }
         }
+    }
+
+    ostringstream os2;
+    os2 << "Transaction Mix: TL" << endl;
+    if( bh != NULL ) {
+	    bh->logErrorMessage( os2.str() );
+    } else if( t != NULL ) {
+	    cout << "MEESUT Transaction Mix: TL" << endl;
+    } else {
+	    cout << "DMSUT Transaction Mix: TL" << endl;
     }
 }
 
@@ -1536,6 +1614,16 @@ void TxnRestDB::execute( int clientId, const TTradeOrderFrame1Input *pIn,
     std::vector<Json::Value *> *bArr = sendQuery( clientId, osSQL.str().c_str() );
     strncpy(pOut->broker_name, bArr->at(0)->get("b_name", "").asCString(), cB_NAME_len);
     pOut->broker_name[cB_NAME_len]  ='\0';
+
+    ostringstream os2;
+    os2 << "Transaction Mix: TO" << endl;
+    if( bh != NULL ) {
+	    bh->logErrorMessage( os2.str() );
+    } else if( t != NULL ) {
+	    cout << "MEESUT Transaction Mix: TO" << endl;
+    } else {
+	    cout << "DMSUT Transaction Mix: TO" << endl;
+    }
 }
 
 void TxnRestDB::execute( int clientId, const TTradeOrderFrame2Input *pIn,
@@ -1881,6 +1969,16 @@ void TxnRestDB::execute( int clientId, const TTradeResultFrame1Input *pIn,
         pOut->hs_qty = 0;
     } else {
         pOut->hs_qty = hsArr->at(0)->get("hs_qty", "").asInt();
+    }
+
+    ostringstream os2;
+    os2 << "Transaction Mix: TR" << endl;
+    if( bh != NULL ) {
+	    bh->logErrorMessage( os2.str() );
+    } else if( t != NULL ) {
+	    cout << "MEESUT Transaction Mix: TR" << endl;
+    } else {
+	    cout << "DMSUT Transaction Mix: TR" << endl;
     }
 }
 
@@ -2288,6 +2386,16 @@ void TxnRestDB::execute( int clientId, const TTradeStatusFrame1Input *pIn,
     pOut->cust_l_name[cL_NAME_len] = '\0';
     strncpy(pOut->broker_name, jsonArr->at(0)->get( "b_name", "" ).asCString(), cB_NAME_len);
     pOut->broker_name[cB_NAME_len] = '\0';
+
+    ostringstream os2;
+    os2 << "Transaction Mix: TS" << endl;
+    if( bh != NULL ) {
+	    bh->logErrorMessage( os2.str() );
+    } else if( t != NULL ) {
+	    cout << "MEESUT Transaction Mix: TS" << endl;
+    } else {
+	    cout << "DMSUT Transaction Mix: TS" << endl;
+    }
 }
 
 bool replace(std::string& str, const std::string& from, const std::string& to) {
@@ -2413,6 +2521,16 @@ void TxnRestDB::execute( int clientId, const TTradeUpdateFrame1Input *pIn,
         osSQL.clear();
         osSQL.str("");
     } //for
+
+    ostringstream os2;
+    os2 << "Transaction Mix: TU" << endl;
+    if( bh != NULL ) {
+	    bh->logErrorMessage( os2.str() );
+    } else if( t != NULL ) {
+	    cout << "MEESUT Transaction Mix: TU" << endl;
+    } else {
+	    cout << "DMSUT Transaction Mix: TU" << endl;
+    }
 }
 
 void TxnRestDB::execute( int clientId, const TTradeUpdateFrame2Input *pIn,
