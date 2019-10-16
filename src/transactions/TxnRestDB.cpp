@@ -429,7 +429,7 @@ void TxnRestDB::execute( int clientId, const TDataMaintenanceFrame1Input *pIn ) 
             osSQL.str("");	
             osSQL << "UPDATE account_permission SET ";
             osSQL << "ap_acl = '1111' WHERE ap_ca_id = ";
-            osSQL << pIn->acct_id << "ap_acl = '" << buff << "'";
+            osSQL << pIn->acct_id;
             //TODO: free buff?
             jsonArr = sendQuery( clientId, osSQL.str().c_str() );
             (void) jsonArr;
@@ -440,7 +440,7 @@ void TxnRestDB::execute( int clientId, const TDataMaintenanceFrame1Input *pIn ) 
 
             osSQL << "UPDATE account_permission SET ";
             osSQL << "ap_acl = '0011' WHERE ap_ca_id = ";
-            osSQL << pIn->acct_id << "ap_acl = '" << buff << "'";
+            osSQL << pIn->acct_id;
             //TODO: free buff?
             jsonArr = sendQuery( clientId, osSQL.str().c_str() );
             (void) jsonArr;
@@ -550,7 +550,7 @@ void TxnRestDB::execute( int clientId, const TDataMaintenanceFrame1Input *pIn ) 
         ostringstream osSQL;
         osSQL << "SELECT cx_tx_id FROM customer_taxrate ";
         osSQL << "WHERE cx_c_id = " << pIn->c_id << " AND ";
-        osSQL << "(cx_tx_id LIKE 'US\%' OR cx_tx_id LIKE 'CN\%')";
+        osSQL << "(cx_tx_id LIKE 'US%' OR cx_tx_id LIKE 'CN%')";
         std::vector<Json::Value *> *jsonArr = sendQuery( clientId, osSQL.str().c_str() );
         string cx_tx_id = jsonArr->at(0)->get("cx_tx_id", "").asString();
         //TODO: free jsonArr
@@ -600,20 +600,18 @@ void TxnRestDB::execute( int clientId, const TDataMaintenanceFrame1Input *pIn ) 
     } else if( strcmp( pIn->table_name, "exchange" ) == 0 ) {
         ostringstream osSQL;
         osSQL << "SELECT count(*) as cnt FROM exchange WHERE ex_desc LIKE ";
-        osSQL << "'\%LAST UPDATED%'";
+        osSQL << "'%LAST UPDATED%'";
         std::vector<Json::Value *> *jsonArr = sendQuery( clientId, osSQL.str().c_str() );
         long rowcount = jsonArr->at(0)->get("cnt", "").asInt64();
         //TODO: free jsonArr
         osSQL.clear();
         osSQL.str("");
         if( rowcount == 0 ) {
-            //TODO: convert now() to appropriate MySQL call
             osSQL << "UPDATE exchange SET ex_desc = ex_desc + ";
             osSQL << "' LAST UPDATED ' + now()";
             jsonArr = sendQuery( clientId, osSQL.str().c_str() );
             //TODO: free jsonArr
         } else {
-            //TODO: fix this query on MySQL
             osSQL << "UPDATE exchange SET ex_desc = substring(";
             osSQL << "ex_desc, 1, len(ex_desc)-len(now())) + now()";
             jsonArr = sendQuery( clientId, osSQL.str().c_str() );
@@ -624,7 +622,7 @@ void TxnRestDB::execute( int clientId, const TDataMaintenanceFrame1Input *pIn ) 
         osSQL << "SELECT count(*) as cnt FROM financial ";
         osSQL << "WHERE fi_co_id = " << pIn->co_id << " ";
         osSQL << "AND substring(convert(char(8), fi_qtr_start_date, ";
-        osSQL << "2) 7, 2) = '01'";
+        osSQL << "2), 7, 2) = '01'";
         std::vector<Json::Value *> *jsonArr = sendQuery( clientId, osSQL.str().c_str() );
         long rowcount = jsonArr->at(0)->get("cnt", "").asInt64();
         osSQL.clear();
@@ -632,13 +630,13 @@ void TxnRestDB::execute( int clientId, const TDataMaintenanceFrame1Input *pIn ) 
         //TODO: free jsonArr
         if( rowcount > 0 ) {
             osSQL << "UPDATE financial SET fi_qtr_start_date = ";
-            osSQL << "fi_qtr_start_date + 1 day WHERE ";
+            osSQL << "fi_qtr_start_date + interval '1 day' WHERE ";
             osSQL << "fi_co_id = " << pIn->co_id;
             jsonArr = sendQuery( clientId, osSQL.str().c_str() );
             //TODO: free jsonArr
         } else {
             osSQL << "UPDATE financial SET fi_qtr_start_date = ";
-            osSQL << "fi_qtr_start_date - 1 day WHERE ";
+            osSQL << "fi_qtr_start_date - interval '1 day' WHERE ";
             osSQL << "fi_co_id = " << pIn->co_id;
             //TODO: free jsonArr;
         }
@@ -646,13 +644,13 @@ void TxnRestDB::execute( int clientId, const TDataMaintenanceFrame1Input *pIn ) 
         ostringstream osSQL;
         osSQL << "UPDATE news_item SET ni_dts = ni_dts + 1 day ";
         osSQL << "WHERE ni_id = ( SELECT nx_ni_id FROM news_xref ";
-        osSQL << "nx_co_id = " << pIn->co_id;
+        osSQL << "WHERE nx_co_id = " << pIn->co_id << " )";
         std::vector<Json::Value *> *jsonArr = sendQuery( clientId, osSQL.str().c_str() );
         //TODO: free jsonArr
     } else if( strcmp( pIn->table_name, "security" )  == 0 ) {
         ostringstream osSQL;
         osSQL << "UPDATE security SET s_exch_date = ";
-        osSQL << "s_exch_date + 1 day WHERE s_symb = ";
+        osSQL << "s_exch_date + interval '1 day' WHERE s_symb = ";
         osSQL << "'" << pIn->symbol << "'";
         std::vector<Json::Value *> *jsonArr = sendQuery( clientId, osSQL.str().c_str() );
         //TODO: free jsonArr
@@ -742,8 +740,8 @@ void TxnRestDB::execute( int clientId, const TMarketFeedFrame1Input *pIn,
         osSQL << pIn->Entries[i].symbol << "'";
         std::vector<Json::Value *> *jsonArr = sendQuery( clientId, osSQL.str().c_str() );
 
-	osSQL.clear();
-	osSQL.str("");
+        osSQL.clear();
+        osSQL.str("");
         osSQL << "SELECT count(*) as rows_modified FROM ";
         osSQL << "last_trade WHERE lt_s_symb = '";
         osSQL << pIn->Entries[i].symbol << "'";
@@ -863,7 +861,6 @@ void TxnRestDB::execute( int clientId, const TMarketWatchFrame1Input *pIn,
         std::vector<Json::Value *> *sec_res = sendQuery( clientId, osSQL.str().c_str() );
         osSQL.clear();
         osSQL.str("");
-        //TODO: verify this is the right date format for mysql comparisons
         osSQL << "SELECT dm_close FROM daily_market WHERE dm_s_symb ='";
         osSQL << cursor->at(j)->get("symb", "").asString() << "' ";
         osSQL << "AND dm_date = '" << pIn->start_day.year << "-";
@@ -888,7 +885,8 @@ void TxnRestDB::execute( int clientId, const TSecurityDetailFrame1Input *pIn,
 
     //Unrolled sproc
 
-    osSQL << "SELECT s_name, co_id, co_name, co_sp_rate, co_ceo, co_desc, co_open_date, co_st_id, address.ad_line1, ";
+    // Duplicated because double select from same table that's been aliased screws with CC
+    osSQL << "SELECT s_name, s_symb, co_id, co_name, co_sp_rate, co_ceo, co_desc, co_open_date, co_st_id, address.ad_line1, ";
     osSQL << "address.ad_line2, zip_code.zc_town, zip_code.zc_div, address.ad_zc_code, address.ad_ctry, s_num_out, s_start_date, s_exch_date, ";
     osSQL << "s_pe, s_52wk_high, s_52wk_high_date, s_52wk_low, s_52wk_low_date, s_dividend, s_yield, zip_code2.zc_div2, ";
     osSQL << "address2.ad_ctry2, address2.ad_line2_1, address2.ad_line2_2, zip_code2.zc_town2, address2.ad_zc_code2, ex_close, ex_desc, ex_name, ex_num_symb, ";
@@ -907,7 +905,7 @@ void TxnRestDB::execute( int clientId, const TSecurityDetailFrame1Input *pIn,
     osSQL.str("");
     osSQL << "SELECT fi_year, fi_qtr, fi_qtr_start_date, fi_revenue, fi_net_earn, fi_basic_eps, fi_dilut_eps, "; 
     osSQL << "fi_margin, fi_inventory, fi_assets, fi_liability, fi_out_basic, fi_out_dilut FROM financial WHERE ";
-    osSQL << "fi_co_id = " << jsonArr->at(0)->get("co_id", "").asInt64() << " ORDER BY fi_year ASC, fi_qtr LIMIT 120";
+    osSQL << "fi_co_id = " << jsonArr->at(0)->get("co_id", "").asInt64() << " ORDER BY fi_year ASC, fi_qtr LIMIT 20";
     std::vector<Json::Value *> *fiArr = sendQuery( clientId, osSQL.str().c_str() );
     long fin_len = fiArr->size();
 
@@ -1171,7 +1169,7 @@ void TxnRestDB::execute( int clientId, const TTradeLookupFrame1Input *pIn,
     pOut->num_found = 0;
     for( int i = 0; i < pIn->max_trades; i++ ) {
         ostringstream osSQL;
-        osSQL << "SELECT t_bid_price, t_exec_name, t_is_cash, ";
+        osSQL << "SELECT t_id, t_bid_price, t_exec_name, t_is_cash, ";
         osSQL << "tt_is_mrkt, t_trade_price FROM trade, trade_type ";
         osSQL << "WHERE t_id = " << pIn->trade_id[i] << " AND ";
         osSQL << "t_tt_id = tt_id";
@@ -1201,7 +1199,7 @@ void TxnRestDB::execute( int clientId, const TTradeLookupFrame1Input *pIn,
             time_t t = ctArr->at(0)->get( "ct_dts", "" ).asInt64() / 1000;
             struct tm *ti = localtime( &t );
             char buff[56];
-	    memset( buff, '\0', sizeof(buff) );
+            memset( buff, '\0', sizeof(buff) );
             strftime( buff, 56, "%F %T", ti );
 
             sscanf(buff, "%hd-%hd-%hd %hd:%hd:%hd",
@@ -1555,7 +1553,7 @@ void TxnRestDB::execute( int clientId, const TTradeOrderFrame2Input *pIn,
 
     //0,0 should be i_bid_price
     //test for null
-    if ( strncmp("null", jsonArr->at(0)->get("ap_acl", "").asCString(), 4 ) != 0 ) {
+    if ( jsonArr->size() > 0 && strncmp("null", jsonArr->at(0)->get("ap_acl", "").asCString(), 4 ) != 0 ) {
         strncpy(pOut->ap_acl, jsonArr->at(0)->get("ap_acl", "").asCString(), cACL_len);
         pOut->ap_acl[cACL_len] = '\0';
     } else {
@@ -1641,7 +1639,7 @@ void TxnRestDB::execute( int clientId, const TTradeOrderFrame3Input *pIn,
     osSQL << "Done block" << endl;
     osSQL.clear();
     osSQL.str("");
-    osSQL << "SELECT hs_qty FROM holding_summary WHERE ";
+    osSQL << "SELECT hs_qty, hs_ca_id FROM holding_summary WHERE ";
     osSQL << "hs_ca_id = " << pIn->acct_id << " AND hs_s_symb = '";
     osSQL << pOut->symbol << "'";
     std::vector<Json::Value *> *hsArr = sendQuery( clientId, osSQL.str().c_str() );
@@ -1892,7 +1890,7 @@ void TxnRestDB::execute( int clientId, const TTradeResultFrame2Input *pIn,
     int needed_qty = pIn->trade_qty;
     ostringstream osSQL;
 
-    osSQL << "SELECT ca_b_id, ca_c_id, ca_tax_st FROM customer_account ";
+    osSQL << "SELECT ca_b_id, ca_c_id, ca_tax_st, ca_id FROM customer_account ";
     osSQL << "WHERE ca_id = " << pIn->acct_id;
     std::vector<Json::Value *> *caArr = sendQuery( clientId, osSQL.str().c_str() );
 
@@ -2241,7 +2239,7 @@ void TxnRestDB::execute( int clientId, const TTradeStatusFrame1Input *pIn,
                          TTradeStatusFrame1Output *pOut ) {
     ostringstream osSQL;
     osSQL << "SELECT t_id, t_dts, st_name, tt_name, t_s_symb, t_qty, t_exec_name, t_chrg, ";
-    osSQL << "s_name, ex_name FROM trade, status_type, trade_type, security, exchange WHERE ";
+    osSQL << "s_name, ex_name, t_ca_id FROM trade, status_type, trade_type, security, exchange WHERE ";
     osSQL << "t_ca_id = " << pIn->acct_id << " AND st_id = t_st_id AND tt_id = t_tt_id AND ";
     osSQL << "s_symb = t_s_symb AND ex_id = s_ex_id ORDER BY t_dts DESC LIMIT 50";
     std::vector<Json::Value *> *jsonArr = sendQuery( clientId, osSQL.str().c_str() );
@@ -2332,7 +2330,7 @@ void TxnRestDB::execute( int clientId, const TTradeUpdateFrame1Input *pIn,
             osSQL.clear();
             osSQL.str("");
         } //if
-        osSQL << "SELECT t_bid_price, t_exec_name, t_is_cash, tt_is_mrkt, t_trade_price ";
+        osSQL << "SELECT t_id, t_bid_price, t_exec_name, t_is_cash, tt_is_mrkt, t_trade_price ";
         osSQL << "FROM trade, trade_type WHERE t_id = " << pIn->trade_id[i] << " AND t_tt_id = tt_id";
         std::vector<Json::Value *> *tArr = sendQuery( clientId, osSQL.str().c_str() );
         pOut->trade_info[i].bid_price = tArr->at(0)->get("t_bid_price", "").asDouble();
