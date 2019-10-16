@@ -413,7 +413,7 @@ void TxnRestDB::execute( int clientId, const TCustomerPositionFrame2Input *pIn,
 void TxnRestDB::execute( int clientId, const TDataMaintenanceFrame1Input *pIn ) {
 
     //unrolled sproc
-    if( strcmp( pIn->table_name, "account_permission" ) == 0 ) {
+    if( strcmp( pIn->table_name, "ACCOUNT_PERMISSION" ) == 0 ) {
         //ACCOUNT_PERMISSION TABLE
         ostringstream osSQL;
         osSQL << "SELECT ap_acl FROM account_permission ";
@@ -446,7 +446,7 @@ void TxnRestDB::execute( int clientId, const TDataMaintenanceFrame1Input *pIn ) 
             (void) jsonArr;
 
         }
-    } else if( strcmp( pIn->table_name, "address" ) == 0 ) {
+    } else if( strcmp( pIn->table_name, "ADDRESS" ) == 0 ) {
         //ADDRESS TABLE
         string line2;
         long ad_id;
@@ -489,7 +489,7 @@ void TxnRestDB::execute( int clientId, const TDataMaintenanceFrame1Input *pIn ) 
             (void) jsonArr; //dodge compiler warning unused
             //TODO: free jsonArr
         }
-    } else if( strcmp( pIn->table_name, "company" ) == 0 ) {
+    } else if( strcmp( pIn->table_name, "COMPANY" ) == 0 ) {
         //COMPANY TABLE
         ostringstream osSQL;
         osSQL << "SELECT co_sp_rate FROM company ";
@@ -514,7 +514,7 @@ void TxnRestDB::execute( int clientId, const TDataMaintenanceFrame1Input *pIn ) 
             //TODO: free jsonArr
             (void) jsonArr;
         }
-    } else if( strcmp( pIn->table_name, "customer" ) == 0 ) {
+    } else if( strcmp( pIn->table_name, "CUSTOMER" ) == 0 ) {
         //CUSTOMER TABLE
         int lenMindSpring = strlen("@mindspring.com");
         ostringstream osSQL;
@@ -546,7 +546,7 @@ void TxnRestDB::execute( int clientId, const TDataMaintenanceFrame1Input *pIn ) 
             //TODO: free jsonArr
             (void) jsonArr;
         }
-    } else if( strcmp( pIn->table_name, "customer_taxrate" ) == 0 ) {
+    } else if( strcmp( pIn->table_name, "CUSTOMER_TAXRATE" ) == 0 ) {
         ostringstream osSQL;
         osSQL << "SELECT cx_tx_id FROM customer_taxrate ";
         osSQL << "WHERE cx_c_id = " << pIn->c_id << " AND ";
@@ -587,7 +587,7 @@ void TxnRestDB::execute( int clientId, const TDataMaintenanceFrame1Input *pIn ) 
         jsonArr = sendQuery( clientId, osSQL.str().c_str() );
         //TODO: free jsonArr
         (void) jsonArr;
-    } else if( strcmp( pIn->table_name, "daily_market" )  == 0 ) {
+    } else if( strcmp( pIn->table_name, "DAILY_MARKET" )  == 0 ) {
         //TODO: I'm not sure about the typing in here, this query might
         //not run
         ostringstream osSQL;
@@ -597,7 +597,7 @@ void TxnRestDB::execute( int clientId, const TDataMaintenanceFrame1Input *pIn ) 
         osSQL << "'" << pIn->day_of_month << "'";
         std::vector<Json::Value *> *jsonArr = sendQuery( clientId, osSQL.str().c_str() );
         //TODO: free jsonArr
-    } else if( strcmp( pIn->table_name, "exchange" ) == 0 ) {
+    } else if( strcmp( pIn->table_name, "EXCHANGE" ) == 0 ) {
         ostringstream osSQL;
         osSQL << "SELECT count(*) as cnt FROM exchange WHERE ex_desc LIKE ";
         osSQL << "'%LAST UPDATED%'";
@@ -617,7 +617,7 @@ void TxnRestDB::execute( int clientId, const TDataMaintenanceFrame1Input *pIn ) 
             jsonArr = sendQuery( clientId, osSQL.str().c_str() );
             //TODO: free jsonArr
         }
-    } else if( strcmp( pIn->table_name, "financial" ) == 0) {
+    } else if( strcmp( pIn->table_name, "FINANCIAL" ) == 0) {
         ostringstream osSQL;
         osSQL << "SELECT count(*) as cnt FROM financial ";
         osSQL << "WHERE fi_co_id = " << pIn->co_id << " ";
@@ -640,21 +640,21 @@ void TxnRestDB::execute( int clientId, const TDataMaintenanceFrame1Input *pIn ) 
             osSQL << "fi_co_id = " << pIn->co_id;
             //TODO: free jsonArr;
         }
-    } else if( strcmp( pIn->table_name, "news_item" ) == 0 ) {
+    } else if( strcmp( pIn->table_name, "NEWS_ITEM" ) == 0 ) {
         ostringstream osSQL;
         osSQL << "UPDATE news_item SET ni_dts = ni_dts + 1 day ";
         osSQL << "WHERE ni_id = ( SELECT nx_ni_id FROM news_xref ";
         osSQL << "WHERE nx_co_id = " << pIn->co_id << " )";
         std::vector<Json::Value *> *jsonArr = sendQuery( clientId, osSQL.str().c_str() );
         //TODO: free jsonArr
-    } else if( strcmp( pIn->table_name, "security" )  == 0 ) {
+    } else if( strcmp( pIn->table_name, "SECURITY" )  == 0 ) {
         ostringstream osSQL;
         osSQL << "UPDATE security SET s_exch_date = ";
         osSQL << "s_exch_date + interval '1 day' WHERE s_symb = ";
         osSQL << "'" << pIn->symbol << "'";
         std::vector<Json::Value *> *jsonArr = sendQuery( clientId, osSQL.str().c_str() );
         //TODO: free jsonArr
-    } else if( strcmp( pIn->table_name, "taxrate" ) == 0 ) {
+    } else if( strcmp( pIn->table_name, "TAXRATE" ) == 0 ) {
         ostringstream osSQL;
         osSQL << "SELECT tx_name FROM taxrate WHERE tx_id = " << pIn->tx_id;
         std::vector<Json::Value *> *jsonArr = sendQuery( clientId, osSQL.str().c_str() );
@@ -672,7 +672,7 @@ void TxnRestDB::execute( int clientId, const TDataMaintenanceFrame1Input *pIn ) 
         osSQL << "WHERE tx_id = " << pIn->tx_id;
         jsonArr = sendQuery( clientId, osSQL.str().c_str() );
         //TODO: free jsonArr
-    } else if( strcmp( pIn->table_name, "watch_item" ) == 0 ) {
+    } else if( strcmp( pIn->table_name, "WATCH_ITEM" ) == 0 ) {
         //Count number of symbols
         ostringstream osSQL;
         osSQL << "SELECT count(*) as cnt FROM watch_item, watch_list ";
