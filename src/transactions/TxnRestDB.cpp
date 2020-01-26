@@ -2284,7 +2284,7 @@ void TxnRestDB::execute( int clientId, const TTradeStatusFrame1Input *pIn,
     pOut->cust_f_name[cF_NAME_len] = '\0';
     strncpy(pOut->cust_l_name, cArr->at(0)->get( "c_l_name", "" ).asCString(), cL_NAME_len);
     pOut->cust_l_name[cL_NAME_len] = '\0';
-    strncpy(pOut->broker_name, jsonArr->at(0)->get( "b_name", "" ).asCString(), cB_NAME_len);
+    strncpy(pOut->broker_name, cArr->at(0)->get( "b_name", "" ).asCString(), cB_NAME_len);
     pOut->broker_name[cB_NAME_len] = '\0';
 }
 
