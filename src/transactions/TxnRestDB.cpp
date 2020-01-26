@@ -886,13 +886,13 @@ void TxnRestDB::execute( int clientId, const TSecurityDetailFrame1Input *pIn,
     //Unrolled sproc
 
     // Duplicated because double select from same table that's been aliased screws with CC
-    osSQL << "SELECT s_name, s_symb, co_id, co_name, co_sp_rate, co_ceo, co_desc, co_open_date, co_st_id, address.ad_line1, ";
-    osSQL << "address.ad_line2, zip_code.zc_town, zip_code.zc_div, address.ad_zc_code, address.ad_ctry, s_num_out, s_start_date, s_exch_date, ";
-    osSQL << "s_pe, s_52wk_high, s_52wk_high_date, s_52wk_low, s_52wk_low_date, s_dividend, s_yield, zip_code2.zc_div2, ";
-    osSQL << "address2.ad_ctry2, address2.ad_line2_1, address2.ad_line2_2, zip_code2.zc_town2, address2.ad_zc_code2, ex_close, ex_desc, ex_name, ex_num_symb, ";
+    osSQL << "SELECT s_name, s_symb, co_id, co_name, co_sp_rate, co_ceo, co_desc, co_open_date, co_st_id, ad_line1, ";
+    osSQL << "ad_line2, zc_town, zc_div, ad_zc_code, ad_ctry, s_num_out, s_start_date, s_exch_date, ";
+    osSQL << "s_pe, s_52wk_high, s_52wk_high_date, s_52wk_low, s_52wk_low_date, s_dividend, s_yield, zc_div2, ";
+    osSQL << "ad_ctry2, ad_line2_1, ad_line2_2, zc_town2, ad_zc_code2, ex_close, ex_desc, ex_name, ex_num_symb, ";
     osSQL << "ex_open FROM security, company, address, address2, zip_code, zip_code2, exchange  WHERE ";
-    osSQL << "s_symb = '" << pIn->symbol << "' AND co_id = s_co_id AND address.ad_id = co_ad_id AND address2.ad_id2 = ex_ad_id AND ";
-    osSQL << "ex_id = s_ex_id AND address.ad_zc_code = zip_code.zc_code AND address2.ad_zc_code2 = zip_code2.zc_code2";
+    osSQL << "s_symb = '" << pIn->symbol << "' AND co_id = s_co_id AND ad_id = co_ad_id AND ad_id2 = ex_ad_id AND ";
+    osSQL << "ex_id = s_ex_id AND ad_zc_code = zc_code AND ad_zc_code2 = zc_code2";
     std::vector<Json::Value *> *jsonArr = sendQuery( clientId, osSQL.str().c_str() );
 
     osSQL.clear();
