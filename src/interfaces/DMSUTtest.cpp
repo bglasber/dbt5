@@ -22,7 +22,7 @@ bool CDMSUTtest::DataMaintenance(PDataMaintenanceTxnInput pTxnInput)
 {
 	// Data Maintenance harness code (TPC provided)
 	// this class uses our implementation of CDataMaintenanceDB class
-	CDataMaintenanceDB m_DataMaintenanceDB(m_pDBConnection);
+	CDataMaintenanceDB m_DataMaintenanceDB(NULL, m_pDBConnection);
 	CDataMaintenance m_DataMaintenance(&m_DataMaintenanceDB);
 
 	// Data Maintenance output parameters
@@ -38,7 +38,7 @@ bool CDMSUTtest::TradeCleanup(PTradeCleanupTxnInput pTxnInput)
 {
 	// Data Maintenance harness code (TPC provided)
 	// this class uses our implementation of CTradeCleanupDB class
-	CTradeCleanupDB	m_TradeCleanupDB(m_pDBConnection);
+	CTradeCleanupDB	m_TradeCleanupDB(NULL, m_pDBConnection);
 	CTradeCleanup m_TradeCleanup(&m_TradeCleanupDB);
 
 	// Data Maintenance output parameters

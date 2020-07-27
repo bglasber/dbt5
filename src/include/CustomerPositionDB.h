@@ -21,7 +21,7 @@ class CCustomerPositionDB : public TxnRestDB, public CCustomerPositionDBInterfac
 {
     public:
         //CCustomerPositionDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
-        CCustomerPositionDB(CDBConnection *pDBConn) : TxnRestDB() {};
+        CCustomerPositionDB(CBrokerageHouse *bh, CDBConnection *pDBConn) : TxnRestDB(bh) {};
         ~CCustomerPositionDB() {};
 
         virtual void DoCustomerPositionFrame1(

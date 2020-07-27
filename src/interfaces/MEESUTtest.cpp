@@ -29,7 +29,7 @@ void *TradeResultAsync(void* data)
 
 	// trade result harness code (TPC provided)
 	// this class uses our implementation of CTradeResultDB class
-	CTradeResultDB		m_TradeResultDB( m_pConn );
+	CTradeResultDB		m_TradeResultDB( pCMEESUTtest, m_pConn );
 	CTradeResult		m_TradeResult( &m_TradeResultDB );
 
 	// Market-Feed output parameters
@@ -103,7 +103,7 @@ void *MarketFeedAsync(void* data)
 
 	// trade result harness code (TPC provided)
 	// this class uses our implementation of CMarketFeedDB class
-	CMarketFeedDB m_MarketFeedDB( m_pConn );
+	CMarketFeedDB m_MarketFeedDB( pCMEESUTtest, m_pConn );
 	CMarketFeed		m_MarketFeed( &m_MarketFeedDB, &m_SendToMarket );
 
 	// Market-Feed output parameters

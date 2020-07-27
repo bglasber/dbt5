@@ -52,34 +52,35 @@ void *workerThread(void *data)
 		CSendToMarket sendToMarket = CSendToMarket(
 				&(pThrParam->pBrokerageHouse->m_fLog), brokerClientId);
 		pThrParam->pBrokerageHouse->logErrorMessage("sendToMarket created...\n");
-		CMarketFeedDB marketFeedDB(pDBConnection);
+		CMarketFeedDB marketFeedDB(pThrParam->pBrokerageHouse, pDBConnection);
 		CMarketFeed marketFeed = CMarketFeed(&marketFeedDB, &sendToMarket);
-		CTradeOrderDB tradeOrderDB(pDBConnection);
+		CTradeOrderDB tradeOrderDB(pThrParam->pBrokerageHouse, pDBConnection);
 		CTradeOrder tradeOrder = CTradeOrder(&tradeOrderDB, &sendToMarket);
 
 		// Initialize all classes that will be used to execute transactions.
-		CBrokerVolumeDB brokerVolumeDB(pDBConnection);
+		CBrokerVolumeDB brokerVolumeDB(pThrParam->pBrokerageHouse, pDBConnection);
 		CBrokerVolume brokerVolume = CBrokerVolume(&brokerVolumeDB);
-		CCustomerPositionDB customerPositionDB(pDBConnection);
+		CCustomerPositionDB customerPositionDB(pThrParam->pBrokerageHouse, pDBConnection);
 		CCustomerPosition customerPosition = CCustomerPosition(&customerPositionDB);
-		CMarketWatchDB marketWatchDB(pDBConnection);
+		CMarketWatchDB marketWatchDB(pThrParam->pBrokerageHouse, pDBConnection);
 		CMarketWatch marketWatch = CMarketWatch(&marketWatchDB);
-		CSecurityDetailDB securityDetailDB = CSecurityDetailDB(pDBConnection);
+		CSecurityDetailDB securityDetailDB = CSecurityDetailDB(pThrParam->pBrokerageHouse, pDBConnection);
 		CSecurityDetail securityDetail = CSecurityDetail(&securityDetailDB);
-		CTradeLookupDB tradeLookupDB(pDBConnection);
+		CTradeLookupDB tradeLookupDB(pThrParam->pBrokerageHouse, pDBConnection);
 		CTradeLookup tradeLookup = CTradeLookup(&tradeLookupDB);
-		CTradeStatusDB tradeStatusDB(pDBConnection);
+		CTradeStatusDB tradeStatusDB(pThrParam->pBrokerageHouse, pDBConnection);
 		CTradeStatus tradeStatus = CTradeStatus(&tradeStatusDB);
-		CTradeUpdateDB tradeUpdateDB(pDBConnection);
+		CTradeUpdateDB tradeUpdateDB(pThrParam->pBrokerageHouse, pDBConnection);
 		CTradeUpdate tradeUpdate = CTradeUpdate(&tradeUpdateDB);
-		CDataMaintenanceDB dataMaintenanceDB(pDBConnection);
+		CDataMaintenanceDB dataMaintenanceDB(pThrParam->pBrokerageHouse, pDBConnection);
 		CDataMaintenance dataMaintenance = CDataMaintenance(&dataMaintenanceDB);
-		CTradeCleanupDB tradeCleanupDB(pDBConnection);
+		CTradeCleanupDB tradeCleanupDB(pThrParam->pBrokerageHouse, pDBConnection);
 		CTradeCleanup tradeCleanup = CTradeCleanup(&tradeCleanupDB);
-		CTradeResultDB tradeResultDB(pDBConnection);
+		CTradeResultDB tradeResultDB(pThrParam->pBrokerageHouse, pDBConnection);
 		CTradeResult tradeResult = CTradeResult(&tradeResultDB);
 
 		pThrParam->pBrokerageHouse->logErrorMessage("DB tran objects created...\n");
+		//std::cout << "trade cleanup has host: " << tradeCleanupDB.host << std::endl;
 
 		do {
 			int clientId;
@@ -190,6 +191,7 @@ void *workerThread(void *data)
 					break;
 				case TRADE_CLEANUP:
 					std::cout << "Trade Cleanup transaction for cid: " << clientId << std::endl;
+					//std::cout << "trade cleanup has host: " << tradeCleanupDB.host << std::endl;
 					pThrParam->pBrokerageHouse->logErrorMessage("trade_cleanup transaction...\n");
 					iRet = pThrParam->pBrokerageHouse->RunTradeCleanup(
 							&(pMessage->TxnInput.TradeCleanupTxnInput),

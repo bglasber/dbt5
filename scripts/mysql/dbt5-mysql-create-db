@@ -1,8 +1,13 @@
 #!/bin/bash
 DBT5NAME=dbt5
 USERNAME=kronos
-mysql -u root -e "DROP DATABASE ${DBT5NAME}";
+echo "Dropping"
+mysql -u root -e "DROP DATABASE IF EXISTS ${DBT5NAME}";
+echo "Creating"
 mysql -u root -e "CREATE DATABASE ${DBT5NAME}";
+echo "Dropping user"
 mysql -u root -e "DROP USER '${USERNAME}'@'%'";
+echo "Creating user"
 mysql -u root -e "CREATE USER '${USERNAME}'@'%'";
+echo "Granting user privileges"
 mysql -u root -e "GRANT ALL ON dbt5.* TO ${USERNAME}";

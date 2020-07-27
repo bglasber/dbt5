@@ -21,7 +21,7 @@ class CTradeStatusDB : public TxnRestDB, public CTradeStatusDBInterface
 {
     public:
         //CTradeStatusDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
-        CTradeStatusDB(CDBConnection *pDBConn) : TxnRestDB() {};
+        CTradeStatusDB(CBrokerageHouse *bh, CDBConnection *pDBConn) : TxnRestDB(bh) {};
 
         ~CTradeStatusDB() {};
 

@@ -21,7 +21,7 @@ class CTradeOrderDB : public TxnRestDB, public CTradeOrderDBInterface
 {
     public:
         //CTradeOrderDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
-        CTradeOrderDB(CDBConnection *pDBConn) : TxnRestDB() {};
+        CTradeOrderDB(CBrokerageHouse *bh, CDBConnection *pDBConn) : TxnRestDB(bh) {};
         ~CTradeOrderDB() {};
 
         virtual void DoTradeOrderFrame1(

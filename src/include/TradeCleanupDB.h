@@ -14,12 +14,13 @@
 
 #include "TxnBaseDB.h"
 #include "TxnRestDB.h"
+#include "DMSUTtest.h"
 
 class CTradeCleanupDB : public TxnRestDB, public CTradeCleanupDBInterface
 {
     public:
         //CTradeCleanupDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
-        CTradeCleanupDB(CDBConnection *pDBConn) : TxnRestDB() {};
+        CTradeCleanupDB(CBrokerageHouse *bh, CDBConnection *pDBConn) : TxnRestDB(bh) {};
         ~CTradeCleanupDB() {};
 
         virtual void DoTradeCleanupFrame1(int clientId, const TTradeCleanupFrame1Input *pIn);

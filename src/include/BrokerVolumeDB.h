@@ -20,7 +20,7 @@ class CBrokerVolumeDB : public TxnRestDB, public CBrokerVolumeDBInterface
 {
     public:
         //CBrokerVolumeDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
-        CBrokerVolumeDB(CDBConnection *pDBConn) : TxnRestDB() {};
+        CBrokerVolumeDB(CBrokerageHouse *bh, CDBConnection *pDBConn) : TxnRestDB(bh) {};
         ~CBrokerVolumeDB() {};
 
         virtual void DoBrokerVolumeFrame1(int clientId, const TBrokerVolumeFrame1Input *pIn,

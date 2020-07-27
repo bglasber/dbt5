@@ -19,7 +19,7 @@ class CMarketWatchDB : public TxnRestDB, public CMarketWatchDBInterface
 {
     public:
         //CMarketWatchDB(CDBConnection *pDBConn) : CTxnBaseDB(pDBConn) {};
-        CMarketWatchDB(CDBConnection *pDBConn) : TxnRestDB() {};
+        CMarketWatchDB(CBrokerageHouse *bh, CDBConnection *pDBConn) : TxnRestDB(bh) {};
         ~CMarketWatchDB() {};
 
         virtual void DoMarketWatchFrame1(
