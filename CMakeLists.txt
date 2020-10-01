@@ -46,7 +46,7 @@ IF (DBMS STREQUAL "pgsql")
 
         SET(DBCFLAGS "-DLIBPQ -I${PG_INCLUDEDIR}")
 
-        SET(DB_LIBS "-L${PG_LIBDIR} -L/usr/lib/x86_64-linux-gnu/ -lpq -l:libcurl.so.3")
+        SET(DB_LIBS "-L${PG_LIBDIR} -L/usr/local/pgsql/lib -L/usr/lib/x86_64-linux-gnu/ -lpq -l:libcurl.so.3")
 
         SET(DB_SCRIPTS scripts/pgsql/dbt5-pgsql-start-db
                        scripts/pgsql/dbt5-pgsql-create-indexes
@@ -207,7 +207,7 @@ ADD_EXECUTABLE(${DBT5_TEST_TXN}
 # Set compiler flags.
 #
 
-SET(CMAKE_CXX_FLAGS "-g -pthread -I${EGENINC} -Isrc/include ${LFS_CFLAGS}")
+SET(CMAKE_CXX_FLAGS "-g -pthread -I${EGENINC} -Isrc/include ${LFS_CFLAGS} -L/usr/local/pgsql/lib -I/usr/local/pgsql/include/")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_FORMAT_MACROS")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_CONSTANT_MACROS")
 # FIXME: How to set this for just ${TXN}/${DBMS}/DBConnection.cpp?
